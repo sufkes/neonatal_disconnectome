@@ -1,7 +1,9 @@
 FROM python:3.11-slim-buster
 RUN apt-get update \
   && apt-get upgrade -y \
-  && apt-get install -y pkg-config
+  && apt-get install -y pkg-config \
+  && apt-get install gcc -y \
+  && apt-get install libhdf5-dev -y
 
 RUN pip install --upgrade pip
 
