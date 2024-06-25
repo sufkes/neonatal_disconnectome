@@ -1,4 +1,7 @@
 FROM python:3.11-slim-buster
+RUN apt-get update \
+  && apt-get upgrade -y \
+  && apt-get install -y pkg-config
 
 RUN pip install --upgrade pip
 
