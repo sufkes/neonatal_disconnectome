@@ -1,9 +1,23 @@
 FROM python:3.11-slim-buster
 
-WORKDIR /app
+RUN pip install --upgrade pip
 
-COPY requirements.txt ./
+RUN adduser --disabled-password worker
+USER worker
+WORKDIR /home/worker
 
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --chown=worker:worker requirements.txt requirements.txt
 
-COPY . .
+## ----------------------------------------------------------------
+## Install python packages
+## ----------------------------------------------------------------
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+ENV PATH="/home/worker/.local/bin:${PATH}"
+
+COPY --chown=worker:worker . .
+
+
+
+
+
