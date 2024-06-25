@@ -1,0 +1,8 @@
+<p class="logo">Disconnectome</p>
+<nav>
+  <ul class="nav_links">
+    {% for menu_item in ["001", "002"] %}
+    <li><a href="{{ menu_item }}.html">{{ menu_item|upper }}</a></li>
+    {% endfor %}
+  </ul>
+</nav>

@@ -1,0 +1,14 @@
+{% macro input(id, name, text='', value='', type='text') -%}
+<label for="{{ id }}">
+  <span>{{ text }}: </span>
+  <strong><span aria-label="required" class="required">*</span></strong>
+</label>
+<input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ id }}" required />
+{%- endmacro %}
+
+{% macro radio(id, name, text='', value='', type='radio') -%}
+<label for="{{ id }}">
+  <input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ id }}" required />
+  <span>{{ text }}</span>
+</label>
+{%- endmacro %}

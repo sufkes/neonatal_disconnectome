@@ -1,0 +1,63 @@
+{% from 'forms.html' import input as input_field, radio as input_radio %}
+{% extends 'base.html' %}
+{% block title %}Disconnectome{% endblock %}
+{% block head_scripts %}
+
+async function pick_file() {
+let subject = document.getElementById('subjectID').value;
+let brainImage = document.getElementById('3DBrainImage').files.item(0).name;
+let brainLesionMask = document.getElementById('3DBrainLesionMask').files.item(0).name;
+let type = document.querySelector('input[name=type]:checked').value;
+let age = document.getElementById('gestationalAge').value;
+
+// Call into Python so we can access the file system
+let random_filename = await eel.step1(subject, type, brainImage, brainLesionMask, age)();
+}
+{% endblock %}
+{% block content %}
+<div class="container">
+  <form method="post" onsubmit="pick_file(); return false;">
+    <h1>Input form</h1>
+    <p>
+      Required fields are followed by
+      <strong><span aria-label="required" class="required">*</span></strong>.
+    </p>
+    <section>
+      <h2>Image Data</h2>
+      <p>
+        {{ input_field(id='3DBrainImage', name="brainImage", text='3D Brain Image in NIFTI Format', type="file") }}
+      </p>
+      <p>
+        {{ input_field(id='3DBrainLesionMask', name="brainLesionMask", text='3D Brain Lesion Mask in NIFTI Format',
+        type="file") }}
+      </p>
+      <fieldset>
+        <legend>Select type of brain image: <strong><span aria-label="required" class="required">*</span></strong>
+        </legend>
+
+        {{ input_radio(id='T1w', name="type", text='T1w', value="T1w",
+        type="radio") }}
+
+        {{ input_radio(id='T2w', name="type", text='T2w', value="T2w",
+        type="radio") }}
+
+      </fieldset>
+    </section>
+    <section>
+      <h2>Subject data</h2>
+      <p>
+        {{ input_field(id='subjectID', name="subject", text='Subject ID')
+        }}
+      </p>
+      <p>
+        {{ input_field(id='gestationalAge', name="gestation", text='Subjects gestational age, in weeks', type="number")
+        }}
+      </p>
+
+    </section>
+    <section>
+      <p><button type="submit">Submit</button></p>
+    </section>
+  </form>
+</div>
+{% endblock %}
