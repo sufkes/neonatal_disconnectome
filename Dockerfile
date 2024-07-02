@@ -1,26 +1,23 @@
 FROM python:3.11-slim-buster
 RUN apt-get update \
   && apt-get upgrade -y \
+  && apt-get install -y --no-install-recommends gcc \
   && apt-get install -y pkg-config \
-  && apt-get install gcc -y \
-  && apt-get install libhdf5-dev -y
+  && apt-get install -y libhdf5-dev
 
 RUN pip install --upgrade pip
 
-RUN adduser --disabled-password worker
-USER worker
-WORKDIR /home/worker
+# Set the working directory to /app
+WORKDIR /app
 
-COPY --chown=worker:worker requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
 
 ## ----------------------------------------------------------------
 ## Install python packages
 ## ----------------------------------------------------------------
-RUN pip install --user --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-ENV PATH="/home/worker/.local/bin:${PATH}"
-
-COPY --chown=worker:worker . .
+COPY . .
 
 
 
