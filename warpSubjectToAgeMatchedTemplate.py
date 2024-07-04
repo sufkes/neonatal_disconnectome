@@ -88,6 +88,7 @@ def warpSubjectToAgeMatchedTemplate(subject, image_type, moving_image, lesion_im
   ## 5. Calculate the moving -> fixed transform.
 
   # It would be nice if the user could customize the options of this registration command. Specifically, if they could change the type_of_transform argument, and maybe a few others.
+  #type_of_transform='antsRegistrationSyNQuick[s]'
   registration = ants.registration(fixed=fixed_img, moving=moving_img, type_of_transform='SyN', outprefix=out_prefix, verbose=True)
 
   # This will create the following files:

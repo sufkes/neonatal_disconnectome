@@ -1,6 +1,6 @@
 {% macro input(id, name, text='', value='', type='text') -%}
 <label for="{{ id }}">
-  <span>{{ text }}: </span>
+  {{ text }}:
   <strong><span aria-label="required" class="required">*</span></strong>
 </label>
 <input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ id }}" required />
