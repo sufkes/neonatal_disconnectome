@@ -1,4 +1,5 @@
 from pathlib import Path
+from makeLesionVisitationMaps import generateLesionVisitationMaps
 from warpSubjectToAgeMatchedTemplate import warpSubjectToAgeMatchedTemplate, createRunsDirectory
 from warpLesionToControlSpace import warpLesionToControlSpace
 
@@ -15,5 +16,9 @@ def step1(subject, image_type, moving_image, lesion_image, age):
 @eel.expose
 def step2(subject, moving_image, lesion_image, age):
     warpLesionToControlSpace(subject, moving_image, lesion_image, age)
+
+@eel.expose
+def step3(subject):
+    generateLesionVisitationMaps(subject)
 
 eel.start('templates/main.html', size=(300, 200), jinja_templates='templates', mode=None, host="0.0.0.0")    # Start
