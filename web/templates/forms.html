@@ -1,9 +1,14 @@
-{% macro input(id, name, text='', value='', type='text') -%}
+{% macro input(id, name, text='', value='', type='text', step="0", min="0") -%}
 <label for="{{ id }}">
   {{ text }}:
   <strong><span aria-label="required" class="required">*</span></strong>
 </label>
+{% if type == "number" %}
+<input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ id }}" step="{{ step }}" required />
+{% else %}
 <input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ id }}" required />
+{% endif %}
+
 {%- endmacro %}
 
 {% macro radio(id, name, text='', value='', type='radio') -%}

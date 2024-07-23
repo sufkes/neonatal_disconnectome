@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import ants
 
-def warpLesionToControlSpace(subject, moving_image, lesion_image, age):
+def applySubjectLesionToControlImageWarp(subject, moving_image, lesion_image, age):
   # looping through every subject sub folder in the controls folder
   # file uploaded is what will be used
   cwd = Path.cwd()

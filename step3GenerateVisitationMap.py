@@ -11,7 +11,7 @@ from dipy.tracking.utils import target, density_map
 
 from dipy.io.stateful_tractogram import StatefulTractogram, Space
 
-def generateLesionVisitationMaps(subject):
+def generateVisitationMap(subject):
   cwd = Path.cwd()
   runs_path = cwd / 'runs' / subject
   runs_control_space_path = runs_path / 'control_space'
@@ -30,7 +30,7 @@ def generateLesionVisitationMaps(subject):
     lesion_path = os.path.join(path, 'lesion.nii.gz')
     print(f"lesion_path is: {lesion_path}")
     blah = sub_name.split('_')
-    foo = controls_dir / blah[0] / blah[1] / 'odf_tracker'
+    foo = controls_dir / blah[0] / blah[1] / 'trk'
 
     tract_path = os.path.join(foo, sub_name + '_hardi.trk' )
     print(f"tract_path is: {tract_path}")

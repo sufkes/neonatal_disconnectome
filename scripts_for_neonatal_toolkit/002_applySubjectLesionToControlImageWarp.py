@@ -20,6 +20,8 @@ transformlist += ['<toolkit directory>/template/warps-ants/week-39_to_week-40_wa
 transformlist += ['<toolkit directory>/runs/CC00064XX07/template_space/39w/<prefix>-1Warp.nii.gz'] # lesion mask to age-matched template warp NIFTI path (transform 2, computed in previous step)
 transformlist += ['<toolkit directory>/runs/CC00064XX07/template_space/39w/<prefix>-0GenericAffine.mat'] # lesion mask to age-matched template affine path (transform 1, computed in previous step)
 
+# Get the path to the control DWI image
+control_image = '<toolkit directory>/controls/sub-CC00073XX08/ses-27800/dwi/sub-CC00073XX08_ses-27800_desc-brain_mask.nii.gz'
 
 # (2) Apply the combined transformation to the lesion mask
 # lesion_in_control_image_space = ants.apply_transforms(fixed=<control image path>, moving=<lesion mask path>, transformlist=transformlist)

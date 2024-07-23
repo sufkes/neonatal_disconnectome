@@ -3,17 +3,18 @@
 {% block title %}Disconnectome{% endblock %}
 {% block head_scripts %}
 async function pick_file() {
-document.getElementById('generateLesionVisitationMaps').classList.add("loading");
+document.getElementById('warpVisitationMap').classList.add("loading");
 
 
 document.getElementById('subjectID').setAttribute('disabled', "");
 
 
 let subject = document.getElementById('subjectID').value;
+let type = document.querySelector('input[name=type]:checked').value;
 
 // Call into Python so we can access the file system
-let random_filename = await eel.step3(subject)();
-document.getElementById('generateLesionVisitationMaps').classList.remove("loading");
+let random_filename = await eel.step4(subject, type)();
+document.getElementById('warpVisitationMap').classList.remove("loading");
 
 document.getElementById('subjectID').removeAttribute("disabled");
 
@@ -22,12 +23,25 @@ document.getElementById('subjectID').removeAttribute("disabled");
 
 {% block content %}
 
-<form id="generateLesionVisitationMaps" method="post" onsubmit="pick_file(); return false;">
-  <h2>Generate Visitation Map</h2>
+<form id="warpVisitationMap" method="post" onsubmit="pick_file(); return false;">
+  <h2>Warp Visitation Map To 40 Week Template</h2>
   <p>
     Required fields are followed by
     <strong><span aria-label="required" class="required">*</span></strong>.
   </p>
+
+  <h4>Image Data</h4>
+  <fieldset>
+    <legend>Select type of brain image: <strong><span aria-label="required" class="required">*</span></strong>
+    </legend>
+
+    {{ input_radio(id='T1w', name="type", text='T1w', value="T1w",
+    type="radio") }}
+
+    {{ input_radio(id='T2w', name="type", text='T2w', value="T2w",
+    type="radio") }}
+
+  </fieldset>
 
 
   <h4>Subject data</h4>
