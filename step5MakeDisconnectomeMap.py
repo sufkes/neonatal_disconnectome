@@ -3,16 +3,11 @@
 ## Generate the "disconnetome map". To generate it, we take each of the visitation maps in 40-week template space, binarize them, then compute the average. Finally, we threshold this average image to obtain the final disconnectome map.
 
 import os
-import sys
-import argparse
-
-import numpy as np
 import nibabel as nib
 
-from constants import RUNS_DIR
 
 def makeDisconnectomeMap(in_paths, out_path, threshold):
-
+  try:
     first_iteration = True
     for in_path in in_paths:
         vis_nii = nib.load(in_path) # load visitation map NIFTI file
@@ -42,48 +37,42 @@ def makeDisconnectomeMap(in_paths, out_path, threshold):
 
     # Save the disconnectome map.
     nib.save(dis_nii, out_path)
-
-    return
-
-def main(subject, threshold = 0):
-  runs_path = RUNS_DIR / subject
-  runs_visitation_maps_40w_path = runs_path / 'visitation_maps_40w'
-
-  dir_list = [
-    f.name for f in os.scandir(runs_visitation_maps_40w_path) if f.is_dir()
-  ]
-  print(f"dir_list is: {dir_list}")
-
-  in_paths = []
-
-  for d in dir_list:
-    print(f"directory is: {d}")
-    path = runs_visitation_maps_40w_path / d
-    in_paths += [os.path.join(path, 'visitation_map.nii.gz')]
-
-  print(f"in_paths is: {in_paths}")
-  try:
-    disconnectome_out_dir = runs_path / 'disconnectome'
-    disconnectome_out_dir.mkdir(parents=True, exist_ok=False)
-  except FileExistsError:
-      print("Folder is already there")
+  except Exception as e:
+     raise e
   else:
-      print("Folder was created")
+     return True
 
-  out_path = os.path.join(disconnectome_out_dir, 'disconnectome-threshold_' + str(threshold) + '.nii.gz')
-  print(f"out_path is: {out_path}")
-  makeDisconnectomeMap(in_paths, out_path, 0)
+def main(runs_dir, subject, threshold = 0):
+  try:
+    runs_path = os.path.join(runs_dir, subject)
+    runs_visitation_maps_40w_path = os.path.join(runs_path, 'visitation_maps_40w')
 
+    dir_list = [
+      f.name for f in os.scandir(runs_visitation_maps_40w_path) if f.is_dir()
+    ]
+    print(f"dir_list is: {dir_list}")
 
-## Pseudo code
-# Generate a list of the visitation maps for each control image warped into the 40 week template space.
-#in_paths = [visitiation map for control 1, visitation map for control 2, ...]
+    in_paths = []
 
-# Set path to output disconnectome image.
-#out_path = < ... > # e.g. 'runs/bc040031_wmi/disconnectome/disconnectome.nii.gz'
+    for d in dir_list:
+      print(f"directory is: {d}")
+      path = os.path.join(runs_visitation_maps_40w_path, d)
+      in_paths += [os.path.join(path, 'visitation_map.nii.gz')]
 
-# Choose a threshold. Values below this threshold will be set to zero in the output disconnectome image. For now, we can just set this value to 0, meaning that the thresholding operation will do nothing. Later, we may want to allow the threshold value to be selected by the user, or perhaps hard-code it to some specific values (e.g. 0, 0.5).
-#threshold = 0
+    print(f"in_paths is: {in_paths}")
+    try:
+      disconnectome_out_dir = os.path.join(runs_path, 'disconnectome')
+      os.makedirs(disconnectome_out_dir, exist_ok=False)
+    except FileExistsError:
+        print("Folder is already there")
+    else:
+        print("Folder was created")
 
-# Run the function.
-#makeDisconnectomeMap(in_paths, out_path, threshold)
+    out_path = os.path.join(disconnectome_out_dir, 'disconnectome-threshold_' + str(threshold) + '.nii.gz')
+    print(f"out_path is: {out_path}")
+    makeDisconnectomeMap(in_paths, out_path, 0)
+  except Exception as e:
+     print("makeDisconnectomeMap failed: ", e)
+     return False
+  else:
+     return True

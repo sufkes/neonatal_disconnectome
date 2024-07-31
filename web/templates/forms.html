@@ -1,5 +1,5 @@
 {% macro input(id, name, text='', value='', type='text', step="0", min="0") -%}
-<label for="{{ id }}">
+<label for="{{ id }}" class="label">
   {{ text }}:
   <strong><span aria-label="required" class="required">*</span></strong>
 </label>
@@ -12,8 +12,19 @@
 {%- endmacro %}
 
 {% macro radio(id, name, text='', value='', type='radio') -%}
-<label for="{{ id }}">
+<label for="{{ id }}" class="label">
   <input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ id }}" required />
   <span>{{ text }}</span>
+</label>
+{%- endmacro %}
+
+{% macro select(id, name, text='', options = []) -%}
+<label for="{{ id }}" class="label">
+  <span>{{ text }}</span>
+  <select name="{{ name }}" id="{{ id }}" required>
+    {% for option in options %}
+    <option value="{{option|e}}">{{option|e}}</option>
+    {% endfor %}
+  </select>
 </label>
 {%- endmacro %}
