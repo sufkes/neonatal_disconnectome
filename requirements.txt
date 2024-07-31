@@ -1,0 +1,5 @@
+eel[jinja2]
+antspyx
+dipy
+nibabel
+numpy==1.26.4

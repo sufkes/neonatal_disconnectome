@@ -1,0 +1,51 @@
+{% from 'forms.html' import input as input_field, radio as input_radio %}
+{% extends 'base.html' %}
+{% block title %}Disconnectome{% endblock %}
+{% block head_scripts %}
+async function pick_file() {
+document.getElementById('makeDisconnectomeMap').classList.add("loading");
+
+
+document.getElementById('subjectID').setAttribute('disabled', "");
+document.getElementById('threshold').setAttribute('disabled', "");
+
+let subject = document.getElementById('subjectID').value;
+let threshold = document.getElementById('threshold').value;
+
+// Call into Python so we can access the file system
+let random_filename = await eel.step5(subject, threshold)();
+document.getElementById('makeDisconnectomeMap').classList.remove("loading");
+
+document.getElementById('subjectID').removeAttribute("disabled");
+document.getElementById('threshold').removeAttribute("disabled");
+
+}
+{% endblock %}
+
+{% block content %}
+
+<form id="makeDisconnectomeMap" method="post" onsubmit="pick_file(); return false;">
+  <h2>Generate Disconnectome</h2>
+  <p>
+    Required fields are followed by
+    <strong><span aria-label="required" class="required">*</span></strong>.
+  </p>
+
+
+  <h4>Subject data</h4>
+  <p>
+    {{ input_field(id='subjectID', name="subject", text='Subject ID')
+    }}
+  </p>
+
+  <p>
+    {{ input_field(id='threshold', name="threshold", text='Threshold', type="number", step="0.1")
+    }}
+  </p>
+
+
+  <p><button id="submitButton" type="submit" class="button-primary">Submit</button></p>
+
+</form>
+
+{% endblock %}

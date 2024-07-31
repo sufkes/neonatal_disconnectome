@@ -1,0 +1,63 @@
+{% from 'forms.html' import input as input_field, radio as input_radio %}
+{% extends 'base.html' %}
+{% block title %}Disconnectome{% endblock %}
+{% block head_scripts %}
+async function pick_file() {
+document.getElementById('warpLesionToControlSpace').classList.add("loading");
+
+document.getElementById('3DBrainImage').setAttribute('disabled', "");
+document.getElementById('subjectID').setAttribute('disabled', "");
+document.getElementById('3DBrainLesionMask').setAttribute('disabled', "");
+document.getElementById('gestationalAge').setAttribute('disabled', "");
+document.getElementById('submitButton').setAttribute('disabled', "");
+
+let subject = document.getElementById('subjectID').value;
+let brainImage = document.getElementById('3DBrainImage').files.item(0).name;
+let brainLesionMask = document.getElementById('3DBrainLesionMask').files.item(0).name;
+let age = document.getElementById('gestationalAge').value;
+
+// Call into Python so we can access the file system
+let random_filename = await eel.step2(subject, brainImage, brainLesionMask, age)();
+document.getElementById('warpLesionToControlSpace').classList.remove("loading");
+document.getElementById('3DBrainImage').removeAttribute("disabled");
+document.getElementById('subjectID').removeAttribute("disabled");
+document.getElementById('3DBrainLesionMask').removeAttribute("disabled");
+document.getElementById('gestationalAge').removeAttribute("disabled");
+document.getElementById('submitButton').removeAttribute("disabled");
+}
+{% endblock %}
+
+{% block content %}
+
+<form id="warpLesionToControlSpace" method="post" onsubmit="pick_file(); return false;">
+  <h2>Apply Subject Lesion To Control Image Warp</h2>
+  <p>
+    Required fields are followed by
+    <strong><span aria-label="required" class="required">*</span></strong>.
+  </p>
+
+  <h4>Image Data</h4>
+  <div>
+    {{ input_field(id='3DBrainImage', name="brainImage", text='3D Brain Image in NIFTI Format', type="file") }}
+  </div>
+  <div>
+    {{ input_field(id='3DBrainLesionMask', name="brainLesionMask", text='3D Brain Lesion Mask in NIFTI Format',
+    type="file") }}
+  </div>
+
+  <h4>Subject data</h4>
+  <p>
+    {{ input_field(id='subjectID', name="subject", text='Subject ID')
+    }}
+  </p>
+  <p>
+    {{ input_field(id='gestationalAge', name="gestation", text='Subjects gestational age, in weeks', type="number")
+    }}
+  </p>
+
+
+  <p><button id="submitButton" type="submit" class="button-primary">Submit</button></p>
+
+</form>
+
+{% endblock %}
