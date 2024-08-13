@@ -1,12 +1,14 @@
-{% macro input(id, name, text='', value='', type='text', step="0", min="0") -%}
+{% macro input(id, name, text='', value='', type='text', step="0", min="0", placeholder="placeholder") -%}
 <label for="{{ id }}" class="label">
   {{ text }}:
   <strong><span aria-label="required" class="required">*</span></strong>
 </label>
 {% if type == "number" %}
-<input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ id }}" step="{{ step }}" required />
+<input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ id }}" step="{{ step }}"
+  placeholder="{{ placeholder }}" required />
 {% else %}
-<input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ id }}" required />
+<input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ id }}" placeholder="{{ placeholder }}"
+  required />
 {% endif %}
 
 {%- endmacro %}

@@ -22,14 +22,16 @@
 
   <h4>Subject data</h4>
   <div>
-    {{ input_field(id='subjectID', name="subject", text='Subject ID')
+    {{ input_field(id='subjectID', name="subject", text='Subject ID', placeholder="e.g. CC00034XX09")
     }}
   </div>
   <div>
     {{ input_field(id='gestationalAge', name="gestation", text='Subjects gestational age, in weeks',
-    type="number",step="0.01")
+    type="number",step="0.01", placeholder="e.g. 37.67")
     }}
   </div>
-
-  <button id="next1" type="button">Next</button>
+  <div class="btn-group">
+    <button id="back0" type="button">Back</button>
+    <button id="next1" type="button">Next</button>
+  </div>
 </form>

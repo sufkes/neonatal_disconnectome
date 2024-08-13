@@ -1,15 +1,15 @@
 import os
 import ants
 
-from constants import CONTROLS_DIR, TEMPLATE_WARPS_DIR
+from constants import CONTROL_SPACE, CONTROLS_DIR, TEMPLATE_SPACE, TEMPLATE_WARPS_DIR
 
-def applySubjectLesionToControlImageWarp(runs_dir, subject, lesion_image, age):
+def applySubjectLesionToControlImageWarp(runs_dir, subject, lesion_image, age, skip = False):
   try:
 
     age_dir = age + "W"
     runs_path = os.path.join(runs_dir, subject)
-    runs_template_space_path = os.path.join(runs_path, 'template_space', age_dir)
-    runs_control_space_path = os.path.join(runs_path, 'control_space')
+    runs_template_space_path = os.path.join(runs_path, TEMPLATE_SPACE, age_dir)
+    runs_control_space_path = os.path.join(runs_path, CONTROL_SPACE)
 
 
     # Filepath prefix for transformation files.
@@ -24,14 +24,13 @@ def applySubjectLesionToControlImageWarp(runs_dir, subject, lesion_image, age):
 
     # looping through every subject sub folder in the controls folder
     for d in dir_list:
-
       print(f"directory is: {d}")
       sub_dir_list = [
-        f.name for f in os.scandir(CONTROLS_DIR / d) if f.is_dir()
+        f.name for f in os.scandir(os.path.join(CONTROLS_DIR,d)) if f.is_dir()
       ]
       print(f"sub_dir_list is: {sub_dir_list}")
       sub_name = d + '_' + sub_dir_list[0]
-      path = CONTROLS_DIR / d / sub_dir_list[0] / 'xfm-ants'
+      path = os.path.join(CONTROLS_DIR,d,sub_dir_list[0],'xfm-ants')
       print(f"path is: {path}")
 
       # 40w template to control image warp NIFTI path (transform 4, precomputed)
@@ -42,27 +41,26 @@ def applySubjectLesionToControlImageWarp(runs_dir, subject, lesion_image, age):
 
       # age-matched template to 40w template warp NIFTI path (transform 3, precomputed)
       # If age is equal to 40 can skip this step
-      # if age is 40 skip this
       if(age != "40"):
         template_path = os.path.join(TEMPLATE_WARPS_DIR, 'week-' + age + '_to_week-40_warp.nii.gz')
         print(f"template_path: {template_path}")
         transformlist += [template_path]
 
+      if(not skip):
+        # lesion mask to age-matched template warp NIFTI path (transform 2, computed in previous step)
+        lesion_mask_path = os.path.join(runs_template_space_path, out_prefix + '1Warp.nii.gz')
+        print(f"lesion_mask_path: {lesion_mask_path}")
+        transformlist += [lesion_mask_path]
 
-      # lesion mask to age-matched template warp NIFTI path (transform 2, computed in previous step)
-      lesion_mask_path = os.path.join(runs_template_space_path, out_prefix + '1Warp.nii.gz')
-      print(f"lesion_mask_path: {lesion_mask_path}")
-      transformlist += [lesion_mask_path]
-
-      # lesion mask to age-matched template affine path (transform 1, computed in previous step)
-      affine_path = os.path.join(runs_template_space_path, out_prefix + '0GenericAffine.mat')
-      print(f"affine_path: {affine_path}")
-      transformlist += [affine_path]
+        # lesion mask to age-matched template affine path (transform 1, computed in previous step)
+        affine_path = os.path.join(runs_template_space_path, out_prefix + '0GenericAffine.mat')
+        print(f"affine_path: {affine_path}")
+        transformlist += [affine_path]
 
       print(f"transformlist: {transformlist}")
 
       # (2) Apply the combined transformation to the lesion mask
-      controls_path = CONTROLS_DIR / d / sub_dir_list[0] / 'dwi'
+      controls_path = os.path.join(CONTROLS_DIR,d,sub_dir_list[0],'dwi')
       fixed_image = os.path.join(controls_path, sub_name + '_desc-brain_mask.nii.gz')
       print(f"fixed_image: {fixed_image}")
 

@@ -7,12 +7,12 @@ from dipy.io.streamline import load_trk
 from dipy.tracking.utils import target, density_map
 from dipy.io.stateful_tractogram import StatefulTractogram, Space
 
-from constants import CONTROLS_DIR
+from constants import CONTROL_SPACE, CONTROLS_DIR
 
 def generateVisitationMap(runs_dir, subject):
   try:
     runs_path = os.path.join(runs_dir, subject)
-    runs_control_space_path = os.path.join(runs_path, 'control_space')
+    runs_control_space_path = os.path.join(runs_path, CONTROL_SPACE)
     print(f"runs_control_space_path is: {runs_control_space_path}")
 
     dir_list = [
@@ -27,8 +27,8 @@ def generateVisitationMap(runs_dir, subject):
       print(f"path is: {path}")
       lesion_path = os.path.join(path, 'lesion.nii.gz')
       print(f"lesion_path is: {lesion_path}")
-      blah = sub_name.split('_')
-      trk_dir = CONTROLS_DIR / blah[0] / blah[1] / 'trk'
+      sub_name_split = sub_name.split('_')
+      trk_dir = os.path.join(CONTROLS_DIR,sub_name_split[0],sub_name_split[1],'trk')
 
       tract_path = os.path.join(trk_dir, sub_name + '_hardi.trk' )
       print(f"tract_path is: {tract_path}")

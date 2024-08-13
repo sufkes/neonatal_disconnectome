@@ -1,0 +1,30 @@
+{% from 'forms.html' import input as input_field, select as input_select %}
+
+<form id="form1a">
+  <h3>Generate Disconnectome</h3>
+
+  <h4>Image Data</h4>
+  <div>
+    <label for="lesionImage" class="label">
+      Lesion image in template space
+    </label>
+    <input type="text" name="lesionImage" id="lesionImage" onclick="getFile(event)" required />
+  </div>
+
+  <h4>Subject data</h4>
+  <div>
+    {{ input_field(id='subjectIDA', name="subject", text='Subject ID', placeholder="e.g. CC00034XX09")
+    }}
+  </div>
+  <div>
+    {{ input_field(id='gestationalAgeA', name="gestation", text='Gestational age of dHCP template to which lesion mask
+    is
+    aligned.',
+    type="number",step="0.01", placeholder="e.g. 37.67")
+    }}
+  </div>
+  <div class="btn-group">
+    <button id="back0a" type="button">Back</button>
+    <button id="next1a" type="button">Next</button>
+  </div>
+</form>

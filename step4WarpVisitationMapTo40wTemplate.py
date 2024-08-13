@@ -1,13 +1,13 @@
 import os
 import ants
 
-from constants import TEMPLATE_TEMPLATES_DIR, CONTROLS_DIR
+from constants import CONTROL_SPACE, TEMPLATE_TEMPLATES_DIR, CONTROLS_DIR, VISITATION_MAPS_40W
 
-def warpVisitationMap(runs_dir, subject, image_type):
+def warpVisitationMap(runs_dir, subject, image_type="T1w"):
   try:
     runs_path = os.path.join(runs_dir, subject)
-    runs_control_space_path = os.path.join(runs_path, 'control_space')
-    runs_visitation_maps_40w_path = os.path.join(runs_path, 'visitation_maps_40w')
+    runs_control_space_path = os.path.join(runs_path, CONTROL_SPACE)
+    runs_visitation_maps_40w_path = os.path.join(runs_path, VISITATION_MAPS_40W)
 
     print(f"runs_control_space_path is: {runs_control_space_path}")
     print(f"runs_visitation_maps_40w_path is: {runs_visitation_maps_40w_path}")
@@ -20,11 +20,11 @@ def warpVisitationMap(runs_dir, subject, image_type):
     for d in dir_list:
       print(f"directory is: {d}")
       sub_dir_list = [
-        f.name for f in os.scandir(CONTROLS_DIR / d) if f.is_dir()
+        f.name for f in os.scandir(os.path.join(CONTROLS_DIR,d)) if f.is_dir()
       ]
       print(f"sub_dir_list is: {sub_dir_list}")
       sub_name = d + '_' + sub_dir_list[0]
-      path = CONTROLS_DIR / d / sub_dir_list[0] / 'xfm-ants'
+      path = os.path.join(CONTROLS_DIR,d,sub_dir_list[0],'xfm-ants')
       print(f"path is: {path}")
 
       # path to control-to-40W_template warp file in ANTs format

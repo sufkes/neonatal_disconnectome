@@ -40,6 +40,7 @@
       /* Default (light) theme */
       --bg: #fff;
       --accent-bg: #f5f7ff;
+      --success-bg: #00bfb2;
       --text: #212121;
       --text-light: #585858;
       --border: #898EA4;
@@ -837,6 +838,10 @@
       position: relative;
     }
 
+    .btn-group {
+      margin-top: 2rem;
+    }
+
     .container form,
     #result {
       width: var(--containerWidth);
@@ -859,12 +864,21 @@
       left: calc(var(--containerWidth) + 50px);
     }
 
+    #form1a {
+      left: calc(var(--containerWidth) + 50px);
+    }
+
     #form2 {
       left: calc(var(--containerWidth) + 50px);
     }
 
     #result {
       left: calc(var(--containerWidth) + 50px);
+      width: calc(var(--containerWidth) - 50px);
+    }
+
+    .success {
+      border-color: var(--success-bg);
       width: calc(var(--containerWidth) - 50px);
     }
 

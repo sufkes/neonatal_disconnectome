@@ -5,6 +5,8 @@
 import os
 import nibabel as nib
 
+from constants import DISCONNECTOME, VISITATION_MAPS_40W
+
 
 def makeDisconnectomeMap(in_paths, out_path, threshold):
   try:
@@ -45,7 +47,7 @@ def makeDisconnectomeMap(in_paths, out_path, threshold):
 def main(runs_dir, subject, threshold = 0):
   try:
     runs_path = os.path.join(runs_dir, subject)
-    runs_visitation_maps_40w_path = os.path.join(runs_path, 'visitation_maps_40w')
+    runs_visitation_maps_40w_path = os.path.join(runs_path, VISITATION_MAPS_40W)
 
     dir_list = [
       f.name for f in os.scandir(runs_visitation_maps_40w_path) if f.is_dir()
@@ -61,7 +63,7 @@ def main(runs_dir, subject, threshold = 0):
 
     print(f"in_paths is: {in_paths}")
     try:
-      disconnectome_out_dir = os.path.join(runs_path, 'disconnectome')
+      disconnectome_out_dir = os.path.join(runs_path, DISCONNECTOME)
       os.makedirs(disconnectome_out_dir, exist_ok=False)
     except FileExistsError:
         print("Folder is already there")

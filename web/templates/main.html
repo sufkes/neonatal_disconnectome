@@ -1,41 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Disconnectome{% endblock %}
 {% block head_scripts %}
-
 {% include "script.js" %}
-
-
-function expandAll() {
-document.querySelector('#json').expandAll()
-}
-
-function collapseAll() {
-document.querySelector('#json').collapseAll()
-}
-
-async function getFolder() {
-
-var dosya_path = await eel.getFolder()();
-if (dosya_path) {
-console.log(dosya_path);
-console.log(document.querySelector('#runsFolder'));
-document.querySelector('#runsFolder').value = dosya_path
-const files = await showRunsDirectory(dosya_path)
-document.querySelector('#json').data = JSON.parse(files);
-}
-}
-
-async function getFile(event) {
-event.preventDefault();
-console.log(event.target)
-const file_path = await eel.getFile()();
-console.log(file_path);
-if (file_path) {
-console.log(document.querySelector('#runsFolder'));
-event.target.value = file_path
-}
-}
-
 {% endblock %}
 {% block content %}
 
@@ -45,8 +11,9 @@ event.target.value = file_path
   <json-viewer id="json"></json-viewer>
 </aside>
 <article class="container">
-  {% include "step0.html" %}
+  {% include "start.html" %}
   {% include "step1.html" %}
+  {% include "step1A.html" %}
   {% include "step2.html" %}
   {% include "result.html" %}
   <div class="progress_container">
@@ -83,6 +50,9 @@ event.target.value = file_path
 
     <dt>3D Brain Lesion Mask</dt>
     <dd id="brainLesionMaskOutput"></dd>
+
+    <dt>Lesion Image</dt>
+    <dd id="lesionOutput"></dd>
 
     <dt>3D Brain Image Type</dt>
     <dd id="typeOutput"></dd>
