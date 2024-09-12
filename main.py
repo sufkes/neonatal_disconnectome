@@ -87,4 +87,4 @@ def step2(runs_dir, subject, lesion_image, age, threshold = 0, image_type="T1w")
     else:
       return True
 
-eel.start('templates/main.html', size=(300, 200), jinja_templates='templates', mode=None, host="0.0.0.0")    # Start
+eel.start('templates/main.html', size=(300, 200), jinja_templates='templates', mode='chrome-app', port=8080, cmdline_args=['--start-fullscreen', '--browser-startup-dialog'], host="0.0.0.0")    # Start

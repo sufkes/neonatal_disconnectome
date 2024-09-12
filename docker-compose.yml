@@ -1,8 +1,12 @@
 services:
   app:
     build: .
+    environment:
+      DISPLAY: unix$DISPLAY
     ports:
       - "8000:8000"
     tty: true
     volumes:
       - .:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ~/.Xauthority:/home/.Xauthority

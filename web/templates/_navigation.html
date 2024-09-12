@@ -1,5 +1,5 @@
 <nav class="menu-item">
-  {% for menu_item in ["main", "settings"] %}
-  <a href="{{ menu_item }}.html">{{ menu_item|upper }}</a>
+  {% for menu_item in [("main", "home")] %}
+  <a href="{{ menu_item[0] }}.html">{{ menu_item[1]|upper }}</a>
   {% endfor %}
 </nav>

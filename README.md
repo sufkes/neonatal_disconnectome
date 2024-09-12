@@ -9,3 +9,7 @@
 7. open in a browser the following url [localhost:8000/templates/001.html](localhost:8000/templates/001.html)
 8. to gracefully shutdown the container in a new terminal run `docker compose down --rmi all`
 9. since docker takes up a lot of space run `docker system prune -a` to remove unused docker images
+
+
+## Build instructions
+python -m eel main.py web --windowed --add-data="./controls:controls" --add-data="./template:template"
