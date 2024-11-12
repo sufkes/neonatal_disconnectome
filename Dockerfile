@@ -12,6 +12,7 @@ ARG USER_GID=$USER_UID
 RUN apt-get update \
   && apt-get upgrade -y \
   && apt-get install -y --no-install-recommends gcc \
+  && apt-get install -y build-essential \
   && apt-get install -y pkg-config \
   && apt-get install -y libhdf5-dev \
   && apt-get install -y python3-tk
