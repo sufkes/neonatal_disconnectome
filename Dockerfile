@@ -1,4 +1,4 @@
-FROM python:3.12.6-slim
+FROM ubuntu:24.04
 
 # Set the working directory to /app
 WORKDIR /app
@@ -15,7 +15,9 @@ RUN apt-get update \
   && apt-get install -y build-essential \
   && apt-get install -y pkg-config \
   && apt-get install -y libhdf5-dev \
-  && apt-get install -y python3-tk
+  && apt-get install -y python3-tk \
+  && apt-get install -y python3-pip \
+  && apt-get install -y python3
 
 RUN groupadd --gid $USER_GID $USERNAME \
   && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
