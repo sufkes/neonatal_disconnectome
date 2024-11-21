@@ -1,13 +1,6 @@
-FROM ubuntu:24.04
-
-# Set the working directory to /app
-WORKDIR /app
+FROM python:3.12.6-slim
 
 ENV SHELL="/bin/bash"
-
-ARG USERNAME=disconnectome
-ARG USER_UID=1000
-ARG USER_GID=$USER_UID
 
 RUN apt-get update \
   && apt-get upgrade -y \
@@ -19,14 +12,12 @@ RUN apt-get update \
   && apt-get install -y python3-pip \
   && apt-get install -y python3
 
-RUN groupadd --gid $USER_GID $USERNAME \
-  && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-  && chown -R ${USER_UID}:${USER_GID} /app
+RUN pip install --upgrade pip
 
-USER $USERNAME
+# Set the working directory to /app
+WORKDIR /app
 
-
-COPY --chown=${USER_UID}:${USER_GID} requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
 
 ## ----------------------------------------------------------------
 ## Install python packages
@@ -34,7 +25,7 @@ COPY --chown=${USER_UID}:${USER_GID} requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 
-COPY --chown=${USER_UID}:${USER_GID} . .
+COPY . .
 
 
 
