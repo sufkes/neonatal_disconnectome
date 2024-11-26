@@ -1,6 +1,9 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      platforms:
+        - "linux/amd64"
     environment:
       DISPLAY: unix$DISPLAY
     ports:
