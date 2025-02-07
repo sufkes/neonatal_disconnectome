@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Disconnectome</title>
+  <!-- Include eel.js - note this file doesn't exist in the 'web' directory -->
+  <script type="text/javascript" src="/eel.js"></script>
+  <link rel="stylesheet" href="css/fontello.css">
+  <link rel="stylesheet" href="css/picnic.css">
+  <link rel="stylesheet" href="css/main.css">
+</head>
+
+<body>
+  <div id="app">
+    <nav class="">
+      <a href="main.html" class="brand">
+        <img class="logo" src="/img/logo.png" />
+        <span>Neonatal Disconnectome</span>
+      </a>
+      <!-- responsive-->
+      <input id="bmenub" type="checkbox" class="show">
+      <label for="bmenub" class="burger pseudo button">menu</label>
+
+      <div class="menu">
+        <a href="https://github.com/sufkes/neonatal_disconnectome" target="_blank"
+          class="pseudo button icon-github-circled">GitHub</a>
+      </div>
+    </nav>
+    <main class="content">
+      <article class="container card">
+        <header>
+          <h2 id="formHeaderText">Start a new run</h2>
+        </header>
+        <form class="row" id="startNewRunForm">
+          <fieldset class="flex one two-800">
+            <div class="">
+              <label class="stack" for="runsFolder">
+                Please select the folder where the output for this run will be saved to
+              </label>
+              <div class="file">
+                <div class="fileButton" onclick="getFolder(event)">Browse...</div>
+                <input class="fileInput" type="text" name="runsFolder" id="runsFolder" onclick="getFolder(event)"
+                  placeholder="No folder selected." required autocomplete="off" onkeypress="return false;"
+                  onpaste="return false;" ondrop="return false;" />
+              </div>
+            </div>
+            <div>
+              <legend>Is the lesion map already warped to DHCP template image?</legend>
+              <label for="yes">
+                <input type="radio" value="yes" name="skipStep1" id="yes" required />
+                <span class="checkable">YES</span>
+              </label>
+              <label for="no">
+                <input type="radio" value="no" name="skipStep1" id="no" required />
+                <span class="checkable">NO</span>
+              </label>
+            </div>
+          </fieldset>
+          <footer>
+            <button id="start">Start Run</button>
+          </footer>
+        </form>
+        <form id="warpSubjectToAgeMatchedForm">
+          <h4>Image Data</h4>
+          <fieldset class="flex one">
+            <div>
+              <label for="3DBrainImage" class="stack">
+                3D Brain Image in NIFTI Format
+              </label>
+              <div class="file">
+                <div class="fileButton" onclick="getFile(event)">Browse...</div>
+                <input class="fileInput" type="text" name="brainImage" id="3DBrainImage" onclick="getFile(event)"
+                  placeholder="No file selected." required autocomplete="off" onkeypress="return false;"
+                  onpaste="return false;" ondrop="return false;" />
+              </div>
+              <figure class="hide">
+                <img id="3DBrainImageThumbnail" src=""
+                  alt="Preview of the original brain image (T1 or T2) that the user uploaded as a 1x3 grid of images of the middle planes in the sagittal, coronal, and axial views" />
+                <figcaption>
+                  Preview of the original brain image as a 1x3 grid of images of the middle planes in the sagittal,
+                  coronal, and axial views
+                </figcaption>
+              </figure>
+            </div>
+
+            <div>
+              <label for="3DBrainLesionMask" class="stack">
+                3D Brain Lesion Mask in NIFTI Format
+              </label>
+              <div class="file">
+                <div class="fileButton" onclick="getFile(event)">Browse...</div>
+                <input class="fileInput" type="text" name="brainLesionMask" id="3DBrainLesionMask"
+                  onclick="getFile(event)" placeholder="No file selected." required autocomplete="off"
+                  onkeypress="return false;" onpaste="return false;" ondrop="return false;" />
+              </div>
+            </div>
+            <div class="third">
+              <label for="brainType" class="stack">
+                <span>Select type of brain image:</span>
+                <select name="type" id="brainType" required>
+                  <option value="T1w">T1w</option>
+                  <option value="T2w">T2w</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <h4>Subject data</h4>
+          <fieldset class="flex one two-800">
+            <div class="third">
+              <label for="subjectID" class="stack">
+                Subject ID:
+                <strong><span aria-label="required" class="required">*</span></strong>
+              </label>
+              <input type="text" name="subject" id="subjectID" placeholder="e.g. CC00034XX09" required />
+            </div>
+            <div class="third">
+              <label for="gestationalAge" class="stack">
+                Subjects gestational age, in weeks:
+                <strong><span aria-label="required" class="required">*</span></strong>
+              </label>
+              <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAge" required />
+              <span class="warning"></span>
+            </div>
+          </fieldset>
+          <footer>
+            <button class="dangerous" id="back0" type="button">Back</button>
+            <button id="next1" type="button">Next</button>
+          </footer>
+        </form>
+        <form id="form1a">
+          <h4>Image Data</h4>
+          <fieldset class="flex one">
+            <label for="lesionImage" class="stack">
+              Lesion image already warped to template space
+            </label>
+            <div class="file">
+              <div class="fileButton" onclick="getFile(event)">Browse...</div>
+              <input class="fileInput" type="text" name="lesionImage" id="lesionImage" onclick="getFile(event)"
+                placeholder="No file selected." required autocomplete="off" onkeypress="return false;"
+                onpaste="return false;" ondrop="return false;" />
+            </div>
+          </fieldset>
+
+          <h4>Subject data</h4>
+          <fieldset class="flex one two-800">
+            <div class="third">
+              <label for="subjectIDA" class="stack">
+                Subject ID:
+                <strong><span aria-label="required" class="required">*</span></strong>
+              </label>
+              <input type="text" name="subject" id="subjectIDA" placeholder="e.g. CC00034XX09" required />
+            </div>
+            <div class="third">
+              <label for="gestationalAgeA" class="stack">
+                Subjects gestational age, in weeks:
+                <strong><span aria-label="required" class="required">*</span></strong>
+              </label>
+              <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAgeA"
+                required />
+              <span class="warning"></span>
+            </div>
+          </fieldset>
+          <footer>
+            <button class="dangerous" id="back0a" type="button">Back</button>
+            <button id="next1a" type="button">Next</button>
+          </footer>
+        </form>
+        <form id="generateDisconnectomeForm">
+          <h2>Subject warped to age matched template <span class="label success">Success</span></h2>
+          <div id="previewResultImages" class="tabs three">
+            <input id='tab-1' type='radio' name='tabgroupB' checked />
+            <label class="pseudo button toggle" for="tab-1">Aligned Image Pair</label>
+            <input id='tab-2' type='radio' name='tabgroupB'>
+            <label class="pseudo button toggle" for="tab-2">Lesion on Original Brain Image</label>
+            <input id='tab-3' type='radio' name='tabgroupB'>
+            <label class="pseudo button toggle" for="tab-3">Lesion on Age Matched Template</label>
+            <div class="row">
+              <figure>
+                <img class="previewImage" id="plotAlignedImagePair" src=""
+                  alt="age-matched template image and the warped brain image beside each other to ensure they are aligned. This is to check the result of the first warp step" />
+                <figcaption>
+                  age-matched template image and the warped brain image beside each other to ensure they are aligned.
+                  This
+                  is to check the result of the first warp step
+                </figcaption>
+              </figure>
+
+              <figure>
+                <img class="previewImage" id="lesionOnOriginalTemplateClusters" src=""
+                  alt="Preview the original label image overlaid on the original brain image" />
+                <figcaption>
+                  Preview the original label image overlaid on the original brain image.
+                </figcaption>
+              </figure>
+
+              <figure>
+                <img class="previewImage" id="lesionOnAgeMatchedTemplateClusters" src=""
+                  alt="Preview the warped label image overlaid on the age-matched template image" />
+                <figcaption>
+                  Preview the warped label image overlaid on the age-matched template image.
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <footer>
+            <button class="dangerous" id="back1" type="button">Back</button>
+            <button id="generateDisconnectome" type="button">Generate Disconnectome</button>
+          </footer>
+
+        </form>
+        <div id="result" class="notice">
+          <h3>Disconnectome generated successfully</h3>
+          <p>Some content will go here, which will be inside your notice.</p>
+        </div>
+        <figure class="hide">
+          <img id="plotDisconnectomeAtLesionCentroids" src=""
+            alt="Plot the disconnectome map overlaid on the 40w template (either T1 or T2), and the lesion map warped to the 40w template" />
+          <figcaption>
+            Plot the disconnectome map overlaid on the 40w template (either T1 or T2), and the lesion map warped to the
+            40w
+            template
+          </figcaption>
+        </figure>
+      </article>
+      <aside class="card hide output">
+        <header>
+          <h2>Current Run Input Data</h2>
+        </header>
+        <div class="">
+          <h4>Image Data</h4>
+          <dl class="stack">
+            <dt>3D Brain Image</dt>
+            <dd id="brainImageOutput"></dd>
+
+            <dt>3D Brain Lesion Mask</dt>
+            <dd id="brainLesionMaskOutput"></dd>
+
+            <dt>Lesion Image already warped</dt>
+            <dd id="lesionOutput"></dd>
+
+            <dt>3D Brain Image Type</dt>
+            <dd id="typeOutput"></dd>
+          </dl>
+          <h4>Subject data</h4>
+          <dl class="stack">
+            <dt>Subject ID</dt>
+            <dd id="subjectOutput"></dd>
+
+            <dt>Subjects gestational age, in weeks</dt>
+            <dd id="ageOutput"></dd>
+          </dl>
+        </div>
+      </aside>
+      <footer class="">
+        <p>Disconnectome was created by <a href="#" target="_blank">Steven Ufkes</a> with collaboration with the <a
+            href="https://datasciences.utoronto.ca/research-software-development-support-program/" target="_blank">DSI
+            research software
+            development program</a> and is licensed under the GNU GPLv3 license. <a
+            href="https://github.com/sufkes/neonatal_disconnectome" target="_blank">Source code for this site</a>
+        </p>
+      </footer>
+    </main>
+  </div>
+</body>
+<script src="js/script.js"></script>
+
+</html>

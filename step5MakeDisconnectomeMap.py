@@ -5,7 +5,8 @@
 import os
 import nibabel as nib
 
-from constants import DISCONNECTOME, VISITATION_MAPS_40W
+from constants import DISCONNECTOME, TEMPLATE_TEMPLATES_DIR, VISITATION_MAPS_40W
+from makeThumbnails import plotDisconnectomeAtLesionCentroids
 
 
 def makeDisconnectomeMap(in_paths, out_path, threshold):
@@ -44,7 +45,7 @@ def makeDisconnectomeMap(in_paths, out_path, threshold):
   else:
      return True
 
-def main(runs_dir, subject, threshold = 0):
+def main(runs_dir, subject, image_type, filenameHash, threshold = 0):
   try:
     runs_path = os.path.join(runs_dir, subject)
     runs_visitation_maps_40w_path = os.path.join(runs_path, VISITATION_MAPS_40W)
@@ -62,17 +63,14 @@ def main(runs_dir, subject, threshold = 0):
       in_paths += [os.path.join(path, 'visitation_map.nii.gz')]
 
     print(f"in_paths is: {in_paths}")
-    try:
-      disconnectome_out_dir = os.path.join(runs_path, DISCONNECTOME)
-      os.makedirs(disconnectome_out_dir, exist_ok=False)
-    except FileExistsError:
-        print("Folder is already there")
-    else:
-        print("Folder was created")
-
+    disconnectome_out_dir = os.path.join(runs_path, DISCONNECTOME)
     out_path = os.path.join(disconnectome_out_dir, 'disconnectome-threshold_' + str(threshold) + '.nii.gz')
     print(f"out_path is: {out_path}")
     makeDisconnectomeMap(in_paths, out_path, 0)
+
+    fixed_path = os.path.join(TEMPLATE_TEMPLATES_DIR, 'week40_' + image_type + '.nii.gz')
+    out_lesion_path = os.path.join(disconnectome_out_dir, 'lesion_mask_40-week-template-space-warped.nii.gz')
+    # plotDisconnectomeAtLesionCentroids(fixed_path, out_path, out_lesion_path, 'web/img/disconnectome_at_lesion_centroids_' + filenameHash + '.png')
   except Exception as e:
      print("makeDisconnectomeMap failed: ", e)
      return False

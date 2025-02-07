@@ -4,3 +4,5 @@ dipy
 nibabel
 numpy==1.26.4
 pyinstaller
+matplotlib
+scikit-image

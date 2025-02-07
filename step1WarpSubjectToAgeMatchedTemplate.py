@@ -2,11 +2,12 @@ import os
 import ants
 
 from constants import TEMPLATE_TEMPLATES_DIR
+from makeThumbnails import plotAlignedImagePair, plotLabelClustersOnBackground
 from utils import createTemplateSpaceDirectory
 
 # Age between 28-44 discrete
 
-def warpSubjectToAgeMatchedTemplate(runs_dir, subject, image_type, moving_image, lesion_image, age):
+def warpSubjectToAgeMatchedTemplate(runs_dir, subject, image_type, moving_image, lesion_image, age, filenameHash):
   try:
     ## 1. Create the template space runs directory structure to store result
     out_dir = createTemplateSpaceDirectory(age, runs_dir, subject)
@@ -66,6 +67,10 @@ def warpSubjectToAgeMatchedTemplate(runs_dir, subject, image_type, moving_image,
     ## 7. Save the warped image to NIFTI.
     ants.image_write(warped_image, out_image_path)
     ants.image_write(warped_lesion, out_lesion_path)
+
+    plotAlignedImagePair(out_image_path, fixed_path, 'web/img/plot_aligned_image_pair_'+ filenameHash + '.png')
+    plotLabelClustersOnBackground(out_lesion_path, fixed_path, 'web/img/lesion_on_age_matched_template_clusters_' + filenameHash + '.png')
+    plotLabelClustersOnBackground(lesion_image, moving_image, 'web/img/lesion_on_original_' + filenameHash + '.png')
   except Exception as e:
      print("warpSubjectToAgeMatchedTemplate failed: ", e)
      raise e

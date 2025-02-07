@@ -1,7 +1,7 @@
 from decimal import Decimal
 import os
 
-from constants import CONTROL_SPACE, CONTROLS_DIR, TEMPLATE_SPACE
+from constants import CONTROL_SPACE, CONTROLS_DIR, DISCONNECTOME, TEMPLATE_SPACE
 
 def createRunsDirectory(subject, runs_dir):
   ## 1. Create the runs directory structure
@@ -34,6 +34,18 @@ def createTemplateSpaceDirectory(age, runs_dir, subject):
 
   return out_dir
 
+def createDisconnectomeDirectory(runs_dir, subject):
+  runs_path = os.path.join(runs_dir, subject)
+  disconnectome_out_dir = os.path.join(runs_path, DISCONNECTOME)
+  try:
+    os.makedirs(disconnectome_out_dir, exist_ok=False)
+  except FileExistsError:
+      print("Folder is already there")
+  else:
+      print(f"created disconnectome directory: {disconnectome_out_dir}")
+
+  return disconnectome_out_dir
+
 
 def path_to_dict(path):
     d = {'name': os.path.basename(path), 'path': os.path.abspath(path)}
@@ -54,3 +66,22 @@ def getRoundedAge(age):
       return "44"
 
    return str(roundedAge)
+
+
+def deleteImagefiles():
+  for imageFile in os.listdir("web/img/"):
+    root, ext = os.path.splitext(imageFile)
+    if (root.startswith('brain_image_thumbnail')
+        or
+        root.startswith('plot_aligned_image_pair')
+        or
+        root.startswith('lesion_on_age_matched_template_clusters')
+        or
+        root.startswith('lesion_on_original')
+        or
+        root.startswith('disconnectome_at_lesion_centroids')) and ext == '.png':
+      try:
+        os.remove("web/img/"+imageFile)
+      except OSError as e:
+        # If it fails, inform the user.
+        print("Error: %s - %s." % (e.filename, e.strerror))
