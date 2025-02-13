@@ -236,4 +236,5 @@ form.loading:after {
   display: none;
   left: calc(var(--width-content) + 50px);
   width: calc(var(--width-content) - 50px);
+  padding: 1rem;
 }

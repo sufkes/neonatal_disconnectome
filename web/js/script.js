@@ -167,6 +167,7 @@ async function nextOneA(event) {
     }
 
     if (result) {
+      $formHeaderText.innerText = "Run Finished";
       form1a.style.setProperty('left', 'calc(-1* (var(--containerWidth) + 50px))');
       form1a.style.setProperty('display', 'none')
       finalResult.style.left = "25px";
@@ -207,6 +208,7 @@ async function generateDisconnectome(event) {
   const result = await eel.step2(runsDir, subject, brainLesionMask, age, filenameHash, 0, type)();
 
   if (result) {
+    $formHeaderText.innerText = "Run Finished";
     generateDisconnectomeForm.style.setProperty('left', 'calc(-1* (var(--containerWidth) + 50px))');
     generateDisconnectomeForm.style.setProperty('display', 'none')
     finalResult.style.left = "25px";

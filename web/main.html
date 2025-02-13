@@ -32,7 +32,7 @@
           <h2 id="formHeaderText">Start a new run</h2>
         </header>
         <form class="row" id="startNewRunForm">
-          <fieldset class="flex one two-800">
+          <fieldset class="flex one">
             <div class="">
               <label class="stack" for="runsFolder">
                 Please select the folder where the output for this run will be saved to
@@ -211,18 +211,18 @@
 
         </form>
         <div id="result" class="notice">
-          <h3>Disconnectome generated successfully</h3>
-          <p>Some content will go here, which will be inside your notice.</p>
+          <h2>Generated Disconnectome <span class="label success">Success</span></h2>
+          <figure class="hide">
+            <img id="plotDisconnectomeAtLesionCentroids" src=""
+              alt="Image showing Disconnectome map overlaid on the 40w template, and the lesion map warped to the 40w template" />
+            <figcaption>
+              Disconnectome map overlaid on the 40w template, and the lesion map warped to the 40w template
+            </figcaption>
+          </figure>
+          <footer>
+            <a href="main.html" class="button">Start a new run</a>
+          </footer>
         </div>
-        <figure class="hide">
-          <img id="plotDisconnectomeAtLesionCentroids" src=""
-            alt="Plot the disconnectome map overlaid on the 40w template (either T1 or T2), and the lesion map warped to the 40w template" />
-          <figcaption>
-            Plot the disconnectome map overlaid on the 40w template (either T1 or T2), and the lesion map warped to the
-            40w
-            template
-          </figcaption>
-        </figure>
       </article>
       <aside class="card hide output">
         <header>

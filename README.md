@@ -1,3 +1,8 @@
+# Libraries used
+
+1. Eel
+2. [Picnic css](https://picnicss.com/)
+
 # Setup instructions
 
 ## Setup using docker
@@ -11,6 +16,32 @@
 7. open in a browser the following url [localhost:8000/templates/main.html](localhost:8000/templates/main.html)
 8. to gracefully shutdown the container in a new terminal run `docker compose down --rmi all`
 9. since docker takes up a lot of space run `docker system prune -a` to remove unused docker images
+
+## Troubleshooting
+
+### if you run into this issue
+
+```
+Authorization required, but no authorization protocol specified
+
+Traceback (most recent call last):
+  File "/home/disconnectome/.local/lib/python3.11/site-packages/eel/__init__.py", line 537, in _process_message
+    return_val = _exposed_functions[message['name']](*message['args'])
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/main.py", line 23, in getFolder
+    root = Tk()
+           ^^^^
+  File "/usr/local/lib/python3.11/tkinter/__init__.py", line 2345, in __init__
+    self.tk = _tkinter.create(screenName, baseName, className, interactive, wantobjects, useTk, sync, use)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_tkinter.TclError: couldn't connect to display "unix:0"
+```
+
+just run `xhost +local:docker` from your main terminal
+
+### setting up Tkinter on Mac
+
+install tkinter with homebrew
 
 ## Setup using venv instead of docker
 

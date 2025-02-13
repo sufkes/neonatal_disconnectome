@@ -70,7 +70,7 @@ def main(runs_dir, subject, image_type, filenameHash, threshold = 0):
 
     fixed_path = os.path.join(TEMPLATE_TEMPLATES_DIR, 'week40_' + image_type + '.nii.gz')
     out_lesion_path = os.path.join(disconnectome_out_dir, 'lesion_mask_40-week-template-space-warped.nii.gz')
-    # plotDisconnectomeAtLesionCentroids(fixed_path, out_path, out_lesion_path, 'web/img/disconnectome_at_lesion_centroids_' + filenameHash + '.png')
+    plotDisconnectomeAtLesionCentroids(fixed_path, out_path, out_lesion_path, 'web/img/disconnectome_at_lesion_centroids_' + filenameHash + '.png')
   except Exception as e:
      print("makeDisconnectomeMap failed: ", e)
      return False
