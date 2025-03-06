@@ -11,11 +11,21 @@ ARG USER_GID=$USER_UID
 
 RUN apt-get update \
   && apt-get upgrade -y \
-  && apt-get install -y --no-install-recommends gcc \
-  && apt-get install -y build-essential \
-  && apt-get install -y pkg-config \
-  && apt-get install -y libhdf5-dev \
-  && apt-get install -y python3-tk
+  && apt-get autoclean && \
+  apt-get install -y --no-install-recommends gcc \
+  build-essential \
+  pkg-config \
+  libhdf5-dev \
+  python3-tk \
+  libqt4-dev \
+  cmake \
+  xvfb \
+  libegl1-mesa \
+  x11-xserver-utils \
+  libxkbcommon-x11-0 \
+  x11-utils && \
+  apt-get clean && \
+  rm -rf /var/cache/apk/*
 
 RUN groupadd --gid $USER_GID $USERNAME \
   && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
@@ -29,6 +39,7 @@ COPY --chown=${USER_UID}:${USER_GID} requirements.txt requirements.txt
 ## ----------------------------------------------------------------
 ## Install python packages
 ## ----------------------------------------------------------------
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 

@@ -1,16 +1,22 @@
 "use strict";
 
-const $formHeaderText = document.getElementById("formHeaderText")
+/* Form html elements */
+const formHeaderText = document.getElementById("formHeaderText")
 const startNewRunForm = document.getElementById("startNewRunForm");
 const warpSubjectToAgeMatchedForm = document.getElementById("warpSubjectToAgeMatchedForm");
 const form1a = document.getElementById("form1a");
 const generateDisconnectomeForm = document.getElementById("generateDisconnectomeForm");
 const finalResult = document.getElementById("result");
 
-const progressEl = document.getElementById("progress");
-const circles = document.querySelectorAll(".circle");
 
+/* Input fields Elements */
+const runsInputField = document.getElementById("runsFolder");
 
+/* Modal Elements */
+const loadingModal = document.getElementById("loadingModal");
+const circleLoader = document.getElementById('circlePercentLoader');
+
+let percent = 0;
 let subject;
 let brainImage;
 let brainLesionMask;
@@ -18,6 +24,43 @@ let lesionImage;
 let type;
 let age;
 let skipStepOne = false;
+let currentForm = "startNewRunForm"
+
+//================= file Events ===================
+
+async function getFolder(event) {
+  event.preventDefault();
+  const folder_path = await eel.getFolder()();
+  if (folder_path.length) {
+    runsInputField.value = folder_path
+  }
+}
+
+async function getFile(event) {
+  event.preventDefault();
+  const element = event.target.nextElementSibling
+  const filename = "brain_image_thumbnail_"+ Date.now() + ".png"
+  const file_path = await eel.getFile(element.id === "3DBrainImage", filename)();
+  if (file_path) {
+    element.value = file_path
+    let inputDataElement;
+    if(element.id === "3DBrainImage") {
+      const parent = element.parentElement.nextElementSibling
+      parent.children[0].src = "../img/" + filename;
+      parent.classList.remove("hide")
+      inputDataElement = document.getElementById("brainImageInput")
+    } else if(element.id === "3DBrainLesionMask") {
+      inputDataElement = document.getElementById("brainLesionMaskInput")
+    } else if(element.id === "lesionImage") {
+      inputDataElement = document.getElementById("lesionInput")
+    }
+    inputDataElement.innerText = file_path
+    inputDataElement.previousElementSibling.classList.remove("grayscale")
+    inputDataElement.previousElementSibling.classList.add("success")
+  }
+}
+
+//=============== Form utils ==================
 
 function disableInputs(form) {
   [...form.elements].forEach(element => {
@@ -56,48 +99,48 @@ function validateInputs(ths) {
   return inputsValid;
 }
 
-async function startRun(event) {
-  event.preventDefault();
+function hideForm(form) {
+  form.style.setProperty('left', 'calc(-1* (var(--containerWidth) + 50px))');
+  form.style.setProperty('display', 'none')
+  form.classList.remove("active")
+}
+
+function showForm(form) {
+  form.style.left = "25px";
+  form.style.setProperty('display', 'block')
+  form.classList.add("active")
+}
+
+//============== Core Form Functionality ===============
+
+async function startRun() {
   const inputsValid = validateInputs(startNewRunForm);
   if (inputsValid) {
     await eel.deleteImageFiles()();
     const skipStep = document.getElementById('yes');
-    startNewRunForm.style.setProperty('left', 'calc(-1* (var(--containerWidth) + 50px))');
-    startNewRunForm.style.setProperty('display', 'none')
+    hideForm(startNewRunForm)
     if(skipStep.checked) {
-      $formHeaderText.innerText = "Generate Disconnectome";
+      formHeaderText.innerText = "Generate Disconnectome";
       skipStepOne = true
-      form1a.style.left = "25px";
-      form1a.style.setProperty('display', 'block')
+      showForm(form1a)
+      currentForm = "form1a"
     } else {
-      $formHeaderText.innerText = "Warp Subject Image and Lesion Mask To Age Matched Template";
+      formHeaderText.innerText = "Warp Subject Image and Lesion Mask To Age Matched Template";
       skipStepOne = false
-      warpSubjectToAgeMatchedForm.style.left = "25px";
-      warpSubjectToAgeMatchedForm.style.setProperty('display', 'block')
+      showForm(warpSubjectToAgeMatchedForm)
+      currentForm = "warpSubjectToAgeMatchedForm"
     }
+    document.getElementById("back").classList.remove("hide")
+    document.getElementById("next").setAttribute("form", currentForm)
   }
 }
-//=============== Back Start==================
-function backStart() {
-  startNewRunForm.style.left = "25px";
-  startNewRunForm.style.setProperty('display', 'block')
-  $formHeaderText.innerText = "Start a new run";
-  if(skipStepOne) {
-    form1a.style.setProperty('left', 'calc(var(--containerWidth) + 50px)');
-    form1a.style.setProperty('display', 'none')
-  } else {
-    warpSubjectToAgeMatchedForm.style.setProperty('left', 'calc(var(--containerWidth) + 50px)');
-    warpSubjectToAgeMatchedForm.style.setProperty('display', 'none')
-  }
 
-}
-//============== Next Form===============
-async function nextOne(event) {
-  event.preventDefault();
+
+async function nextOne() {
   const inputsValid = validateInputs(warpSubjectToAgeMatchedForm);
   if(inputsValid) {
     // set loading state and disable inputs
-    warpSubjectToAgeMatchedForm.classList.add("loading");
+    showLoading("Warping Subject To Age Matched Template");
     disableInputs(warpSubjectToAgeMatchedForm)
 
     // get inputs and pass to python function
@@ -107,51 +150,47 @@ async function nextOne(event) {
     type = document.getElementById('brainType').value;
     age = document.getElementById('gestationalAge').value;
 
-    const runsDir = document.getElementById("runsFolder").value
-
+    const runsDir = runsInputField.value
     const filenameHash = Date.now().toString()
 
     const result = await eel.step1(runsDir, subject, type, brainImage, brainLesionMask, age, filenameHash)();
 
     if(result) {
-      $formHeaderText.innerText = "Generate Disconnectome";
-      warpSubjectToAgeMatchedForm.style.setProperty('left', 'calc(-1* (var(--containerWidth) + 50px))');
-      warpSubjectToAgeMatchedForm.style.setProperty('display', 'none')
-      generateDisconnectomeForm.style.left = "25px";
-      generateDisconnectomeForm.style.setProperty('display', 'block')
+      formHeaderText.innerText = "Generate Disconnectome";
+      hideForm(warpSubjectToAgeMatchedForm)
+      showForm(generateDisconnectomeForm)
+      currentForm = "generateDisconnectomeForm"
 
-      document.getElementsByClassName('output')[0].style.display = 'block';
+      const figure1 = document.getElementById("plotAlignedImagePair")
+      const figure2 = document.getElementById("lesionOnOriginalTemplateClusters")
+      const figure3 = document.getElementById("lesionOnAgeMatchedTemplateClusters")
 
-      document.getElementById("brainImageOutput").innerText = brainImage
-      document.getElementById("brainLesionMaskOutput").innerText = brainLesionMask
-      document.getElementById("typeOutput").innerText = type
-      document.getElementById("subjectOutput").innerText = subject
-      document.getElementById("ageOutput").innerText = age
+      figure1.src =
+      "../img/plot_aligned_image_pair_" + filenameHash + ".png";
+
+      figure2.src = "../img/lesion_on_original_" + filenameHash + ".png";
+
+      figure3.src = "../img/lesion_on_age_matched_template_clusters_" + filenameHash + ".png";
+
+      setOutputData("brainImageWarpedOutput", age, runsDir, subject)
+      setOutputData("lesionImageWarpedOutput", age, runsDir, subject)
+
+      // remove loading state and re-enable inputs
+      enableInputs(warpSubjectToAgeMatchedForm);
+      document.getElementById("next").setAttribute("form", currentForm)
+      stopLoading();
+    } else {
+      // TODO: Show error
+      showError()
     }
-
-    const figure1 = document.getElementById("plotAlignedImagePair")
-    const figure2 = document.getElementById("lesionOnOriginalTemplateClusters")
-    const figure3 = document.getElementById("lesionOnAgeMatchedTemplateClusters")
-
-    figure1.src =
-    "../img/plot_aligned_image_pair_" + filenameHash + ".png";
-
-    figure2.src = "../img/lesion_on_original_" + filenameHash + ".png";
-
-    figure3.src = "../img/lesion_on_age_matched_template_clusters_" + filenameHash + ".png";
-
-    // remove loading state and re-enable inputs
-    enableInputs(warpSubjectToAgeMatchedForm);
-    warpSubjectToAgeMatchedForm.classList.remove("loading");
   }
 }
 
-async function nextOneA(event) {
-  event.preventDefault();
+async function nextOneA() {
   const inputsValid = validateInputs(form1a);
   if (inputsValid) {
     // set loading state and disable inputs
-    form1a.classList.add("loading");
+    showLoading("Generating Disconnectome");
     disableInputs(form1a)
 
     // get inputs and pass to python function
@@ -159,7 +198,7 @@ async function nextOneA(event) {
     lesionImage = document.getElementById('lesionImage').value;
     age = document.getElementById('gestationalAgeA').value;
 
-    const runsDir = document.getElementById("runsFolder").value
+    const runsDir = runsInputField.value
     let result = null
     const filenameHash = Date.now().toString();
     if (skipStepOne) {
@@ -167,128 +206,237 @@ async function nextOneA(event) {
     }
 
     if (result) {
-      $formHeaderText.innerText = "Run Finished";
-      form1a.style.setProperty('left', 'calc(-1* (var(--containerWidth) + 50px))');
-      form1a.style.setProperty('display', 'none')
+      formHeaderText.innerText = "Run Finished";
+      hideForm(form1a)
       finalResult.style.left = "25px";
       finalResult.style.setProperty('display', 'block')
 
-      document.getElementsByClassName('output')[0].style.display = 'block';
+      document.querySelector('#plotDisconnectomeAtLesionCentroids').src = "../img/disconnectome_at_lesion_centroids_" + filenameHash + ".png";
 
-      document.getElementById("lesionOutput").innerText = lesionImage
-      document.getElementById("subjectOutput").innerText = subject
-      document.getElementById("ageOutput").innerText = age
+      document.querySelector('#plotDisconnectomeAtLesionCentroids').parentElement.classList.remove("hide");
 
+      // remove loading state and re-enable inputs
+      enableInputs(form1a);
+      stopLoading();
+    } else {
+      showError();
     }
-
-    document.querySelector('#plotDisconnectomeAtLesionCentroids').src = "../img/disconnectome_at_lesion_centroids_" + filenameHash + ".png";
-
-    document.querySelector('#plotDisconnectomeAtLesionCentroids').parentElement.classList.remove("hide");
-
-    // remove loading state and re-enable inputs
-    enableInputs(form1a);
-    form1a.classList.remove("loading");
   }
 }
-//=============== Back One==================
-function backOne() {
-  warpSubjectToAgeMatchedForm.style.left = "25px";
-  warpSubjectToAgeMatchedForm.style.setProperty('display', 'block')
-  generateDisconnectomeForm.style.setProperty('left', 'calc(var(--containerWidth) + 50px)');
-  generateDisconnectomeForm.style.setProperty('display', 'none')
-}
-//=============== Generate Disconnectome ==================
-async function generateDisconnectome(event) {
-  event.preventDefault();
 
+
+//=============== Generate Disconnectome ==================
+async function generateDisconnectome() {
   // set loading state and disable inputs
-  generateDisconnectomeForm.classList.add("loading");
-  const runsDir = document.getElementById("runsFolder").value;
+  showLoading("Generating Disconnectome");
+  const runsDir = runsInputField.value;
   const filenameHash = Date.now().toString();
   const result = await eel.step2(runsDir, subject, brainLesionMask, age, filenameHash, 0, type)();
 
   if (result) {
-    $formHeaderText.innerText = "Run Finished";
-    generateDisconnectomeForm.style.setProperty('left', 'calc(-1* (var(--containerWidth) + 50px))');
-    generateDisconnectomeForm.style.setProperty('display', 'none')
+    formHeaderText.innerText = "Run Finished";
+    hideForm(generateDisconnectomeForm)
+
+    document.getElementById("back").classList.add("hide")
+    document.getElementById("next").classList.add("hide")
+
     finalResult.style.left = "25px";
     finalResult.style.setProperty('display', 'block')
+
+
+    document.querySelector('#plotDisconnectomeAtLesionCentroids').src =
+      "../img/disconnectome_at_lesion_centroids_" + filenameHash + ".png";
+
+    document.querySelector('#plotDisconnectomeAtLesionCentroids').parentElement.classList.remove("hide");
+
+    // remove loading state and re-enable inputs
+    stopLoading();
+  } else {
+    showError();
   }
+}
 
-  document.querySelector('#plotDisconnectomeAtLesionCentroids').src =
-    "../img/disconnectome_at_lesion_centroids_" + filenameHash + ".png";
+//=============== Previous Step ==================
+function previousStep(currentForm, previousForm, headerText) {
+  // hide current form
+  currentForm.style.setProperty('left', 'calc(var(--containerWidth) + 50px)');
+  currentForm.style.setProperty('display', 'none')
+  currentForm.classList.remove("active")
 
-  document.querySelector('#plotDisconnectomeAtLesionCentroids').parentElement.classList.remove("hide");
+  // show previous form
+  previousForm.style.left = "25px";
+  previousForm.style.setProperty('display', 'block')
+  previousForm.classList.add("active")
 
-  // remove loading state and re-enable inputs
-  generateDisconnectomeForm.classList.remove("loading");
+  // update card header text
+  formHeaderText.innerText = headerText;
+
+  // update card footer buttons
+  document.getElementById("next").setAttribute("form", previousForm.id)
 
 }
 
-//================= btn Events===================
+//================= btn Events ===================
+
+function next(event) {
+  event.preventDefault();
+  const id = event.target.getAttribute("form");
+
+  switch (id) {
+    case "startNewRunForm":
+      startRun();
+      break;
+    case "warpSubjectToAgeMatchedForm":
+      nextOne();
+      break;
+    case "form1a":
+      nextOneA();
+      break;
+    case "generateDisconnectomeForm":
+      generateDisconnectome();
+      break;
+    default:
+      break;
+  }
+
+}
+
+function back(event) {
+  event.preventDefault();
+  switch (currentForm) {
+    case "warpSubjectToAgeMatchedForm":
+      previousStep(warpSubjectToAgeMatchedForm, startNewRunForm, "Start a new run")
+      document.getElementById("back").classList.add("hide")
+      break;
+    case "form1a":
+      previousStep(form1a, startNewRunForm, "Start a new run")
+      document.getElementById("back").classList.add("hide")
+      break;
+    case "generateDisconnectomeForm":
+      const text = skipStepOne ? "Generate Disconnectome" : "Warp Subject Image and Lesion Mask To Age Matched Template"
+      previousStep(generateDisconnectomeForm, skipStepOne ? form1a : warpSubjectToAgeMatchedForm, text)
+      break;
+    default:
+      break;
+  }
+}
+
+
 const btnsEvents = () => {
-  const start = document.getElementById("start");
-  const next1 = document.getElementById("next1");
-  const next1a = document.getElementById("next1a");
-  const generate = document.getElementById("generateDisconnectome");
+  const nextButton = document.getElementById("next");
+  const backButton = document.getElementById("back");
 
-  const back0 = document.getElementById("back0");
-  const back0a = document.getElementById("back0a");
-  const back1 = document.getElementById("back1");
+  // next
+  nextButton.addEventListener("click", next);
 
-  // start
-  start.addEventListener("click", startRun);
-  // next1
-  next1.addEventListener("click", nextOne);
-  // next1a
-  next1a.addEventListener("click", nextOneA);
+  // back
+  backButton.addEventListener("click", back);
 
-  // backStart
-  back0.addEventListener("click", backStart);
-  // backStart
-  back0a.addEventListener("click", backStart);
-  // back1
-  back1.addEventListener("click", backOne);
-
-
-  // submit
-  generate.addEventListener("click", generateDisconnectome);
 };
 document.addEventListener("DOMContentLoaded", btnsEvents);
 
+function setOutputData(id, age, runsDir, subject) {
+  let outputDataElement;
+  let val;
+  let roundedAge = Math.round(age)
+  if(roundedAge < 28) {
+    roundedAge = 28
+  }
+  if(roundedAge > 44) {
+    roundedAge = 44
+  }
+  const templateSpacePrefix = runsDir + "/" + subject + "/template_space/" + roundedAge + "W/"
+  const templateSpaceSuffix = roundedAge + "-week-template-space-warped.nii.gz"
+  switch (id) {
+    case "brainImageWarpedOutput":
+      outputDataElement = document.getElementById("brainImageWarpedOutput")
+      val =  templateSpacePrefix + "brain_img_" + templateSpaceSuffix
+      break;
+    case "lesionImageWarpedOutput":
+      outputDataElement = document.getElementById("lesionImageWarpedOutput")
+      val = templateSpacePrefix + "lesion_mask_" + templateSpaceSuffix
+      break;
+    default:
+      break;
+  }
+  updateRunData(outputDataElement, val)
+}
 
-async function getFolder(event) {
+
+function setInputData(event) {
   event.preventDefault();
-  const folder_path = await eel.getFolder()();
-  if (folder_path.length) {
-    document.querySelector("#runsFolder").value = folder_path
+  let inputDataElement;
+  const id = event.target.id
+
+  switch (id) {
+    case "brainType":
+      inputDataElement = document.getElementById("typeInput")
+      break;
+    case "subjectID":
+    case "subjectIDA":
+      inputDataElement = document.getElementById("subjectInput")
+      break;
+    case "gestationalAge":
+    case "gestationalAgeA":
+      inputDataElement = document.getElementById("ageInput")
+      break;
+    default:
+      break;
+  }
+  updateRunData(inputDataElement, event.target.value)
+}
+
+function updateRunData(element, value) {
+  element.innerText = value
+  element.previousElementSibling.classList.remove("grayscale")
+  element.previousElementSibling.classList.add("success")
+}
+
+
+function setProgress(elem, percent) {
+  const degrees = percent * 3.6;
+  const transform = /MSIE 9/.test(navigator.userAgent) ? 'msTransform' : 'transform';
+  elem.querySelector('.counter').setAttribute('data-percent', Math.round(percent));
+  elem.querySelector('.progressEnd').style[transform] = 'rotate(' + degrees + 'deg)';
+  elem.querySelector('.progress').style[transform] = 'rotate(' + degrees + 'deg)';
+  if(percent >= 50 && !elem.classList.contains("fiftyPlus")) {
+    elem.classList.add('fiftyPlus');
+  }
+
+}
+
+function animate() {
+  setProgress(circleLoader, (percent += .06));
+  if(percent < 100) {
+    setTimeout(animate, 15);
   }
 }
 
-async function getFile(event) {
-  event.preventDefault();
-  let element = event.target
-  if(event.target.classList.contains('fileButton')) {
-    element = event.target.nextElementSibling
-  }
-  const filename = "brain_image_thumbnail_"+ Date.now() + ".png"
-  const file_path = await eel.getFile(element.id === "3DBrainImage", filename)();
-  if (file_path) {
-    if(element.id === "3DBrainImage") {
-      element.value = file_path
-      const parent = element.parentElement.nextElementSibling
-      parent.children[0].src = "../img/" + filename;
-      parent.classList.remove("hide")
-    } else if(element.id === "3DBrainLesionMask") {
-      element.value = file_path
-    } else if(element.id === "lesionImage") {
-      element.value = file_path
-    }
-  }
+function showLoading(modalText = "Computing Result") {
+  percent = 0
+  circleLoader.classList.remove("fiftyPlus")
+  document.getElementById("loadingModalLabel").classList.add("hide")
+  document.getElementById("loadingModalClose").classList.add("hide")
+
+  document.getElementById("loadingModalContent").innerHTML = `
+  ${modalText}
+  <p>This computation will take approximately 30s - 1min</p>
+  `
+  document.getElementById("circlePercentLoader").classList.remove("hide")
+  loadingModal.showModal();
+  animate();
 }
 
-async function preview(event) {
-  event.preventDefault();
-  document.getElementById("previewResultImages").classList.remove("hide")
+function stopLoading() {
+  percent = 100
+  loadingModal.close();
 }
 
+function showError() {
+  document.getElementById("loadingModalLabel").classList.remove("hide")
+  document.getElementById("loadingModalClose").classList.remove("hide")
+  document.getElementById("loadingModalContent").innerHTML = `
+    An error occured and the operation failed
+  `
+  document.getElementById("circlePercentLoader").classList.add("hide")
+}

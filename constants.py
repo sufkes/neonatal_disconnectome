@@ -9,10 +9,11 @@ TEMPLATE_MASK_DIR = os.path.join(TEMPLATE_DIR,'mask')
 TEMPLATE_TEMPLATES_DIR = os.path.join(TEMPLATE_DIR,'templates')
 TEMPLATE_WARPS_DIR = os.path.join(TEMPLATE_DIR,'warps-ants')
 
-
 CONTROLS_DIR = os.path.join(BUNDLE_DIR,'controls')
+WEB_IMG_DIR = os.path.join(BUNDLE_DIR,'web', 'img')
 
 # constants for runs directory structure
+THUMBNAILS = "thumbnails"
 CONTROL_SPACE = "control_space"
 DISCONNECTOME = "disconnectome"
 TEMPLATE_SPACE = "template_space"

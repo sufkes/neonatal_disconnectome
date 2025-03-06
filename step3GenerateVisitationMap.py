@@ -1,5 +1,6 @@
 # dipy used here and its dependencies
 
+import logging
 import os
 
 import nibabel as nib
@@ -9,29 +10,25 @@ from dipy.io.stateful_tractogram import StatefulTractogram, Space
 
 from constants import CONTROL_SPACE, CONTROLS_DIR
 
+logger = logging.getLogger(__name__)
+
 def generateVisitationMap(runs_dir, subject):
   try:
     runs_path = os.path.join(runs_dir, subject)
     runs_control_space_path = os.path.join(runs_path, CONTROL_SPACE)
-    print(f"runs_control_space_path is: {runs_control_space_path}")
 
     dir_list = [
       f.name for f in os.scandir(runs_control_space_path) if f.is_dir()
     ]
-    print(f"subject is: {subject}")
-    print(f"dir_list is: {dir_list}")
 
     for d in dir_list:
       sub_name = d
       path = os.path.join(runs_control_space_path, sub_name)
-      print(f"path is: {path}")
       lesion_path = os.path.join(path, 'lesion.nii.gz')
-      print(f"lesion_path is: {lesion_path}")
       sub_name_split = sub_name.split('_')
       trk_dir = os.path.join(CONTROLS_DIR,sub_name_split[0],sub_name_split[1],'trk')
-
       tract_path = os.path.join(trk_dir, sub_name + '_hardi.trk' )
-      print(f"tract_path is: {tract_path}")
+
       # Load tractogram
       tractogram_file = tract_path
       tractogram = load_trk(tractogram_file, reference='same')  # 'same' ensures the affine of the tractogram is used
@@ -54,12 +51,10 @@ def generateVisitationMap(runs_dir, subject):
       visitation_map_img = nib.Nifti1Image(visitation_map_array, roi_affine)
 
       out_visitation_prefix = os.path.join(runs_control_space_path, sub_name)
-      print(f"out_visitation_prefix: {out_visitation_prefix}")
       visitation_map_out_path = os.path.join(out_visitation_prefix, 'visitation.nii.gz')
-      print(f"visitation_map_out_path: {visitation_map_out_path}")
       nib.save(visitation_map_img, visitation_map_out_path) # save NIFTI
   except Exception as e:
-     print("generateVisitationMap failed: ", e)
+     logger.exception("Generate visitiation map step failed")
      raise e
   else:
      return True

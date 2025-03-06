@@ -2,12 +2,14 @@
 
 ## Generate the "disconnetome map". To generate it, we take each of the visitation maps in 40-week template space, binarize them, then compute the average. Finally, we threshold this average image to obtain the final disconnectome map.
 
+import logging
 import os
 import nibabel as nib
 
 from constants import DISCONNECTOME, TEMPLATE_TEMPLATES_DIR, VISITATION_MAPS_40W
 from makeThumbnails import plotDisconnectomeAtLesionCentroids
 
+logger = logging.getLogger(__name__)
 
 def makeDisconnectomeMap(in_paths, out_path, threshold):
   try:
@@ -41,11 +43,12 @@ def makeDisconnectomeMap(in_paths, out_path, threshold):
     # Save the disconnectome map.
     nib.save(dis_nii, out_path)
   except Exception as e:
+     logger.exception("Make disconnectome map failed")
      raise e
   else:
      return True
 
-def main(runs_dir, subject, image_type, filenameHash, threshold = 0):
+def generateDisconnectome(runs_dir, subject, image_type, filenameHash, threshold = 0):
   try:
     runs_path = os.path.join(runs_dir, subject)
     runs_visitation_maps_40w_path = os.path.join(runs_path, VISITATION_MAPS_40W)
@@ -53,26 +56,22 @@ def main(runs_dir, subject, image_type, filenameHash, threshold = 0):
     dir_list = [
       f.name for f in os.scandir(runs_visitation_maps_40w_path) if f.is_dir()
     ]
-    print(f"dir_list is: {dir_list}")
 
     in_paths = []
 
     for d in dir_list:
-      print(f"directory is: {d}")
       path = os.path.join(runs_visitation_maps_40w_path, d)
       in_paths += [os.path.join(path, 'visitation_map.nii.gz')]
 
-    print(f"in_paths is: {in_paths}")
     disconnectome_out_dir = os.path.join(runs_path, DISCONNECTOME)
     out_path = os.path.join(disconnectome_out_dir, 'disconnectome-threshold_' + str(threshold) + '.nii.gz')
-    print(f"out_path is: {out_path}")
     makeDisconnectomeMap(in_paths, out_path, 0)
 
     fixed_path = os.path.join(TEMPLATE_TEMPLATES_DIR, 'week40_' + image_type + '.nii.gz')
     out_lesion_path = os.path.join(disconnectome_out_dir, 'lesion_mask_40-week-template-space-warped.nii.gz')
     plotDisconnectomeAtLesionCentroids(fixed_path, out_path, out_lesion_path, 'web/img/disconnectome_at_lesion_centroids_' + filenameHash + '.png')
   except Exception as e:
-     print("makeDisconnectomeMap failed: ", e)
-     return False
+    logger.exception("Generating disconnectome failed")
+    raise e
   else:
-     return True
+    return True

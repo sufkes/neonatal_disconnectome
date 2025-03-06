@@ -12,7 +12,7 @@
 
 <body>
   <div id="app">
-    <nav class="">
+    <nav>
       <a href="main.html" class="brand">
         <img class="logo" src="/img/logo.png" />
         <span>Neonatal Disconnectome</span>
@@ -24,14 +24,30 @@
       <div class="menu">
         <a href="https://github.com/sufkes/neonatal_disconnectome" target="_blank"
           class="pseudo button icon-github-circled">GitHub</a>
+        <button onclick="showLoading()">Show dialog</button>
       </div>
     </nav>
     <main class="content">
-      <article class="container card">
+      <dialog id="loadingModal">
+        <header>
+          <h3>Computing Result <span id="loadingModalLabel" class="label error hide">Error</span></h3>
+          <label id="loadingModalClose" class="close hide" onclick="stopLoading()">&times;</label>
+        </header>
+        <section id="loadingModalContent">
+        </section>
+        <footer>
+          <div id="circlePercentLoader" class="circlePercent">
+            <div class="counter" data-percent="0"></div>
+            <div class="progress"></div>
+            <div class="progressEnd"></div>
+          </div>
+        </footer>
+      </dialog>
+      <article id="mainContainer" class="container card">
         <header>
           <h2 id="formHeaderText">Start a new run</h2>
         </header>
-        <form class="row" id="startNewRunForm">
+        <form class="row active" id="startNewRunForm">
           <fieldset class="flex one">
             <div class="">
               <label class="stack" for="runsFolder">
@@ -39,9 +55,9 @@
               </label>
               <div class="file">
                 <div class="fileButton" onclick="getFolder(event)">Browse...</div>
-                <input class="fileInput" type="text" name="runsFolder" id="runsFolder" onclick="getFolder(event)"
-                  placeholder="No folder selected." required autocomplete="off" onkeypress="return false;"
-                  onpaste="return false;" ondrop="return false;" />
+                <input class="fileInput" type="text" name="runsFolder" id="runsFolder" placeholder="No folder selected."
+                  required autocomplete="off" onkeydown="return false;" onpaste="return false;"
+                  ondrop="return false;" />
               </div>
             </div>
             <div>
@@ -56,9 +72,6 @@
               </label>
             </div>
           </fieldset>
-          <footer>
-            <button id="start">Start Run</button>
-          </footer>
         </form>
         <form id="warpSubjectToAgeMatchedForm">
           <h4>Image Data</h4>
@@ -69,9 +82,9 @@
               </label>
               <div class="file">
                 <div class="fileButton" onclick="getFile(event)">Browse...</div>
-                <input class="fileInput" type="text" name="brainImage" id="3DBrainImage" onclick="getFile(event)"
-                  placeholder="No file selected." required autocomplete="off" onkeypress="return false;"
-                  onpaste="return false;" ondrop="return false;" />
+                <input class="fileInput" type="text" name="brainImage" id="3DBrainImage" placeholder="No file selected."
+                  required autocomplete="off" onkeypress="return false;" onpaste="return false;"
+                  ondrop="return false;" />
               </div>
               <figure class="hide">
                 <img id="3DBrainImageThumbnail" src=""
@@ -90,14 +103,15 @@
               <div class="file">
                 <div class="fileButton" onclick="getFile(event)">Browse...</div>
                 <input class="fileInput" type="text" name="brainLesionMask" id="3DBrainLesionMask"
-                  onclick="getFile(event)" placeholder="No file selected." required autocomplete="off"
-                  onkeypress="return false;" onpaste="return false;" ondrop="return false;" />
+                  placeholder="No file selected." required autocomplete="off" onkeypress="return false;"
+                  onpaste="return false;" ondrop="return false;" />
               </div>
             </div>
             <div class="third">
               <label for="brainType" class="stack">
                 <span>Select type of brain image:</span>
-                <select name="type" id="brainType" required>
+                <select name="type" id="brainType" onchange="setInputData(event)" required>
+                  <option hidden disabled selected value> -- select an option -- </option>
                   <option value="T1w">T1w</option>
                   <option value="T2w">T2w</option>
                 </select>
@@ -112,21 +126,19 @@
                 Subject ID:
                 <strong><span aria-label="required" class="required">*</span></strong>
               </label>
-              <input type="text" name="subject" id="subjectID" placeholder="e.g. CC00034XX09" required />
+              <input type="text" name="subject" id="subjectID" placeholder="e.g. CC00034XX09"
+                onchange="setInputData(event)" required />
             </div>
             <div class="third">
               <label for="gestationalAge" class="stack">
                 Subjects gestational age, in weeks:
                 <strong><span aria-label="required" class="required">*</span></strong>
               </label>
-              <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAge" required />
+              <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAge"
+                onchange="setInputData(event)" required />
               <span class="warning"></span>
             </div>
           </fieldset>
-          <footer>
-            <button class="dangerous" id="back0" type="button">Back</button>
-            <button id="next1" type="button">Next</button>
-          </footer>
         </form>
         <form id="form1a">
           <h4>Image Data</h4>
@@ -136,9 +148,8 @@
             </label>
             <div class="file">
               <div class="fileButton" onclick="getFile(event)">Browse...</div>
-              <input class="fileInput" type="text" name="lesionImage" id="lesionImage" onclick="getFile(event)"
-                placeholder="No file selected." required autocomplete="off" onkeypress="return false;"
-                onpaste="return false;" ondrop="return false;" />
+              <input class="fileInput" type="text" name="lesionImage" id="lesionImage" placeholder="No file selected."
+                required autocomplete="off" onkeypress="return false;" onpaste="return false;" ondrop="return false;" />
             </div>
           </fieldset>
 
@@ -149,7 +160,8 @@
                 Subject ID:
                 <strong><span aria-label="required" class="required">*</span></strong>
               </label>
-              <input type="text" name="subject" id="subjectIDA" placeholder="e.g. CC00034XX09" required />
+              <input type="text" name="subject" id="subjectIDA" placeholder="e.g. CC00034XX09"
+                onchange="setInputData(event)" required />
             </div>
             <div class="third">
               <label for="gestationalAgeA" class="stack">
@@ -157,14 +169,10 @@
                 <strong><span aria-label="required" class="required">*</span></strong>
               </label>
               <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAgeA"
-                required />
+                onchange="setInputData(event)" required />
               <span class="warning"></span>
             </div>
           </fieldset>
-          <footer>
-            <button class="dangerous" id="back0a" type="button">Back</button>
-            <button id="next1a" type="button">Next</button>
-          </footer>
         </form>
         <form id="generateDisconnectomeForm">
           <h2>Subject warped to age matched template <span class="label success">Success</span></h2>
@@ -203,14 +211,8 @@
               </figure>
             </div>
           </div>
-
-          <footer>
-            <button class="dangerous" id="back1" type="button">Back</button>
-            <button id="generateDisconnectome" type="button">Generate Disconnectome</button>
-          </footer>
-
         </form>
-        <div id="result" class="notice">
+        <div id="result">
           <h2>Generated Disconnectome <span class="label success">Success</span></h2>
           <figure class="hide">
             <img id="plotDisconnectomeAtLesionCentroids" src=""
@@ -219,38 +221,70 @@
               Disconnectome map overlaid on the 40w template, and the lesion map warped to the 40w template
             </figcaption>
           </figure>
-          <footer>
-            <a href="main.html" class="button">Start a new run</a>
-          </footer>
         </div>
+        <footer>
+          <button class="error hide" id="back" type="button">Back</button>
+          <button class="right next" id="next" form="startNewRunForm">Next</button>
+        </footer>
+
+
       </article>
-      <aside class="card hide output">
+      <aside class="container card output">
         <header>
-          <h2>Current Run Input Data</h2>
+          <h2>Current Run Data</h2>
         </header>
         <div class="">
-          <h4>Image Data</h4>
-          <dl class="stack">
-            <dt>3D Brain Image</dt>
-            <dd id="brainImageOutput"></dd>
+          <h3>Input Data</h3>
+          <details name="inputData">
+            <summary class="grayscale">Original 3D Brain Image</summary>
+            <p id="brainImageInput"></p>
+          </details>
+          <details name="inputData">
+            <summary class="grayscale">Original 3D Brain Lesion Mask</summary>
+            <p id="brainLesionMaskInput"></p>
+          </details>
+          <details name="inputData">
+            <summary class="grayscale">Lesion Image already warped</summary>
+            <p id="lesionInput"></p>
+          </details>
+          <details name="inputData">
+            <summary class="grayscale">3D Brain Image Type</summary>
+            <p id="typeInput"></p>
+          </details>
+          <details name="inputData">
+            <summary class="grayscale">Subject ID</summary>
+            <p id="subjectInput"></p>
+          </details>
+          <details name="inputData">
+            <summary class="grayscale">Subjects gestational age, in weeks</summary>
+            <p id="ageInput"></p>
+          </details>
 
-            <dt>3D Brain Lesion Mask</dt>
-            <dd id="brainLesionMaskOutput"></dd>
-
-            <dt>Lesion Image already warped</dt>
-            <dd id="lesionOutput"></dd>
-
-            <dt>3D Brain Image Type</dt>
-            <dd id="typeOutput"></dd>
-          </dl>
-          <h4>Subject data</h4>
-          <dl class="stack">
-            <dt>Subject ID</dt>
-            <dd id="subjectOutput"></dd>
-
-            <dt>Subjects gestational age, in weeks</dt>
-            <dd id="ageOutput"></dd>
-          </dl>
+          <h4>Output data</h4>
+          <details name="outputData">
+            <summary class="grayscale">input brain image warped to age-matched template</summary>
+            <p id="brainImageWarpedOutput"></p>
+          </details>
+          <details name="outputData">
+            <summary class="grayscale">input lesion image warped to age-matched template</summary>
+            <p id="lesionImageWarpedOutput"></p>
+          </details>
+          <details name="outputData">
+            <summary class="grayscale">age-matched template image</summary>
+            <p id="ageMatchedTemplateOutput"></p>
+          </details>
+          <details name="outputData">
+            <summary class="grayscale">disconnectome map in 40w template space</summary>
+            <p id="disconnectomeOutput"></p>
+          </details>
+          <details name="outputData">
+            <summary class="grayscale">lesion image in 40w template space</summary>
+            <p id="lesionImageIn40wOutput"></p>
+          </details>
+          <details name="outputData">
+            <summary class="grayscale">40w template image</summary>
+            <p id="40wTemplateImageOutput"></p>
+          </details>
         </div>
       </aside>
       <footer class="">

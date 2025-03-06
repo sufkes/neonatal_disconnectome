@@ -1,10 +1,58 @@
+"""Util functions
+
+These are util functions used by the main program
+
+This file contains the following functions:
+
+    * createControlSpaceDirectory - creates the sub folder structure for the control space subdirectory to store lesion and visitation data
+    * createTemplateSpaceDirectory - creates the sub folder structure for the template space subdirectory to store warps from first step
+    * createDisconnectomeDirectory - creates the sub folder structure for the disconnectome subdirectory to store disconnectome and warped lesion mask
+    * getRoundedAge - given a subjects age it rounds and makes sure is between 28 and 44
+    * deleteImagefiles - deletes old image files from previous runs
+"""
 from decimal import Decimal
+import logging
 import os
+from pathlib import Path
+import shutil
 
-from constants import CONTROL_SPACE, CONTROLS_DIR, DISCONNECTOME, TEMPLATE_SPACE
+from constants import CONTROL_SPACE, CONTROLS_DIR, DISCONNECTOME, TEMPLATE_SPACE, THUMBNAILS, WEB_IMG_DIR
 
-def createRunsDirectory(subject, runs_dir):
-  ## 1. Create the runs directory structure
+logger = logging.getLogger(__name__)
+
+def createImageThumbnailDirectory(subject: str, runs_dir: str):
+  """creates the sub folder structure for the image thumbnail subdirectory based on subject ID
+
+  Parameters
+  ----------
+  subject : str
+      The subject ID used to create the directory structure for current run
+  runs_dir : str
+      The full path of the runs directory
+  """
+
+  path = os.path.join(runs_dir, subject, THUMBNAILS)
+  try:
+    os.makedirs(path, exist_ok=True)
+  except FileExistsError:
+    logger.warning("folder already exists")
+  else:
+    logger.info("Image thumbnail directory created")
+
+def createControlSpaceDirectory(subject: str, runs_dir: str):
+  """creates the sub folder structure for the control space subdirectory based on subject ID
+
+  Parameters
+  ----------
+  subject : str
+      The subject ID used to create the directory structure for current run
+  runs_dir : str
+      The full path of the runs directory
+  """
+
+  createImageThumbnailDirectory(subject, runs_dir)
+
+  # get a list of subdirectories names from controls folder
   dir_list = [
     f.name for f in os.scandir(CONTROLS_DIR) if f.is_dir()
   ]
@@ -17,58 +65,90 @@ def createRunsDirectory(subject, runs_dir):
     try:
       os.makedirs(path, exist_ok=True)
     except FileExistsError:
-        print("Folder is already there")
+      logger.warning("folder already exists")
     else:
-        print("Folder was created")
+      logger.info("Control space sub folders created")
 
 def createTemplateSpaceDirectory(age, runs_dir, subject):
-  ## 1. Create the template space runs directory structure to store result
+  """creates the sub folder structure for the template space subdirectory based on subject ID and subject age
+
+  Parameters
+  ----------
+  age : str
+      The age of the subject
+  runs_dir : str
+      The full path of the runs directory
+  subject : str
+      The subject ID used to create the directory structure for current run
+
+  Returns
+  -------
+  str
+      The full path of newly created template space directory
+  """
+
   age_dir = age + "W"
   out_dir = os.path.join(runs_dir, subject, TEMPLATE_SPACE, age_dir)
   try:
     os.makedirs(out_dir, exist_ok=False)
   except FileExistsError:
-      print("Folder is already there")
+    logger.warning("folder already exists")
   else:
-      print(f"created template space: {out_dir}")
+    logger.info("template space sub folder created: %s", out_dir)
 
   return out_dir
 
 def createDisconnectomeDirectory(runs_dir, subject):
+  """creates the sub folder structure for the disconnectome subdirectory based on subject ID
+
+  Parameters
+  ----------
+  runs_dir : str
+      The full path of the runs directory
+  subject : str
+      The subject ID used to create the directory structure for current run
+
+  Returns
+  -------
+  str
+      The full path of newly created disconnectome directory
+  """
   runs_path = os.path.join(runs_dir, subject)
   disconnectome_out_dir = os.path.join(runs_path, DISCONNECTOME)
   try:
     os.makedirs(disconnectome_out_dir, exist_ok=False)
   except FileExistsError:
-      print("Folder is already there")
+    logger.warning("folder already exists")
   else:
-      print(f"created disconnectome directory: {disconnectome_out_dir}")
+    logger.info("disconnectome directory created: %s", disconnectome_out_dir)
 
   return disconnectome_out_dir
 
-
-def path_to_dict(path):
-    d = {'name': os.path.basename(path), 'path': os.path.abspath(path)}
-    if os.path.isdir(path):
-        d['type'] = "directory"
-        d['children'] = [path_to_dict(os.path.join(path,x)) for x in os.listdir\
-(path)]
-    else:
-        d['type'] = "file"
-    return d
-
-
 def getRoundedAge(age):
-   roundedAge = round(Decimal(age))
-   if(roundedAge < 28):
-      return "28"
-   if(roundedAge > 44):
-      return "44"
+  """Rounds the age
 
-   return str(roundedAge)
+  Parameters
+  ----------
+  age : str
+      The age of the subject
+
+  Returns
+  -------
+  str
+      The age of the subject rounded and between 28 <= roundedAge <= 44
+  """
+  roundedAge = round(Decimal(age))
+  if(roundedAge < 28):
+    return "28"
+  if(roundedAge > 44):
+    return "44"
+
+  return str(roundedAge)
 
 
 def deleteImagefiles():
+  """delete all image files from previous runs. This function is called everytime a new run is started
+  """
   for imageFile in os.listdir("web/img/"):
     root, ext = os.path.splitext(imageFile)
     if (root.startswith('brain_image_thumbnail')
@@ -84,4 +164,27 @@ def deleteImagefiles():
         os.remove("web/img/"+imageFile)
       except OSError as e:
         # If it fails, inform the user.
-        print("Error: %s - %s." % (e.filename, e.strerror))
+        logger.exception("failed to delete image files")
+
+
+def copyImageFiles(runs_dir:str, subject:str):
+  """Copy generated thumbnails from web/img folder to thumbnails folder in the runs directory for given subject
+
+  Parameters
+  ----------
+  runs_dir : str
+      The full path of the runs directory
+  subject : str
+      The subject ID used to create the directory structure for current run
+  """
+  src_files = os.listdir(WEB_IMG_DIR)
+  thumbnail_dir = os.path.join(runs_dir, subject, THUMBNAILS)
+  logger.debug("the thumbnail dir path is: %s", thumbnail_dir)
+  if len(thumbnail_dir) != 0:
+    [f.unlink() for f in Path(thumbnail_dir).glob("*") if f.is_file()]
+
+  for file_name in src_files:
+    full_file_name = os.path.join(WEB_IMG_DIR, file_name)
+    logger.debug("file name is:  %s", full_file_name)
+    if os.path.isfile(full_file_name) and file_name != "logo.png":
+      shutil.copy(full_file_name, thumbnail_dir)

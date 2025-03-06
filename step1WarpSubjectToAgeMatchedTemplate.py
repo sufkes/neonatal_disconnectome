@@ -1,9 +1,12 @@
+import logging
 import os
 import ants
 
 from constants import TEMPLATE_TEMPLATES_DIR
 from makeThumbnails import plotAlignedImagePair, plotLabelClustersOnBackground
-from utils import createTemplateSpaceDirectory
+from utils import copyImageFiles, createTemplateSpaceDirectory
+
+logger = logging.getLogger(__name__)
 
 # Age between 28-44 discrete
 
@@ -32,10 +35,10 @@ def warpSubjectToAgeMatchedTemplate(runs_dir, subject, image_type, moving_image,
       fixed_ants_img = ants.image_read(fixed_path)
       lesion_ants_img = ants.image_read(lesion_image)
     except ValueError as err:
-      print("Opening NIFTI files as ANTSImage objects failed: ", err)
+      logger.exception("Opening NIFTI files as ANTSImage objects failed")
       raise err
     else:
-      print("ANTsImage Objects read successfully")
+      logger.info("ANTsImage Objects read successfully")
 
     ## 5. Calculate the moving -> fixed transform.
     registration = ants.registration(fixed=fixed_ants_img, moving=moving_ants_img, type_of_transform='SyN', outprefix=out_prefix, verbose=True)
@@ -68,11 +71,22 @@ def warpSubjectToAgeMatchedTemplate(runs_dir, subject, image_type, moving_image,
     ants.image_write(warped_image, out_image_path)
     ants.image_write(warped_lesion, out_lesion_path)
 
-    plotAlignedImagePair(out_image_path, fixed_path, 'web/img/plot_aligned_image_pair_'+ filenameHash + '.png')
-    plotLabelClustersOnBackground(out_lesion_path, fixed_path, 'web/img/lesion_on_age_matched_template_clusters_' + filenameHash + '.png')
-    plotLabelClustersOnBackground(lesion_image, moving_image, 'web/img/lesion_on_original_' + filenameHash + '.png')
+    ## 8. Generate the thumbnails and save them
+
+    alignedImage = 'plot_aligned_image_pair_'+ filenameHash + '.png'
+    plotAlignedImagePair(out_image_path, fixed_path, 'web/img/' + alignedImage)
+
+    clustersImage = 'lesion_on_age_matched_template_clusters_' + filenameHash + '.png'
+    plotLabelClustersOnBackground(out_lesion_path, fixed_path, 'web/img/' + clustersImage)
+
+    clustersOriginalImage = 'lesion_on_original_' + filenameHash + '.png'
+    plotLabelClustersOnBackground(lesion_image, moving_image, 'web/img/' + clustersOriginalImage)
+
+    ## 9. Copy the generated thumbnails to the runs directory
+    copyImageFiles(runs_dir, subject)
+
   except Exception as e:
-     print("warpSubjectToAgeMatchedTemplate failed: ", e)
-     raise e
+    logger.exception("Warp subject to age matched template failed")
+    raise e
   else:
-     return True
+    return True

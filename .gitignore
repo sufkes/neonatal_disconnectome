@@ -32,9 +32,15 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.log
+*.log.*
 
 # Data files
 controls/*
 example_input_data/*
 runs/*
 template/*
+
+# ignore everything in img folder except the logo
+web/img/*
+!web/img/logo.png

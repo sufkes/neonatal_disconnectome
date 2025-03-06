@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import os
 import eel
@@ -5,14 +6,18 @@ import eel
 from tkinter import *
 import tkinter.filedialog as fdialog
 
+from logger import configure_logging
 from makeThumbnails import plotThreeView
 from step1WarpSubjectToAgeMatchedTemplate import warpSubjectToAgeMatchedTemplate
 from step2ApplySubjectLesionToControlImageWarp import applySubjectLesionToControlImageWarp
 from step3GenerateVisitationMap import generateVisitationMap
 from step4WarpVisitationMapTo40wTemplate import warpVisitationMap
-from step5MakeDisconnectomeMap import main
-from utils import createRunsDirectory, createTemplateSpaceDirectory, deleteImagefiles, getRoundedAge, path_to_dict
+from step5MakeDisconnectomeMap import generateDisconnectome
+from utils import createControlSpaceDirectory, createTemplateSpaceDirectory, deleteImagefiles, getRoundedAge
 
+configure_logging()
+
+logger = logging.getLogger(__name__)
 
 eel.init(str(Path(__file__).parent / "web"),
         allowed_extensions=[".html", ".js", ".css", ".woff", ".svg", ".svgz", ".png"])
@@ -52,12 +57,12 @@ def deleteImageFiles():
 @eel.expose
 def step1(runs_dir, subject, image_type, moving_image, lesion_image, age, filenameHash):
   try:
-    createRunsDirectory(subject, runs_dir)
+    createControlSpaceDirectory(subject, runs_dir)
     roundedAge = getRoundedAge(age)
     warpSubjectToAgeMatchedTemplate(runs_dir, subject, image_type, moving_image, lesion_image, roundedAge, filenameHash)
   except Exception as e:
-    print("step1 failed: ", e)
-    return e
+    logger.exception("First step failed", e)
+    return False
   else:
     return True
 
@@ -65,7 +70,7 @@ def step1(runs_dir, subject, image_type, moving_image, lesion_image, age, filena
 def step1A(runs_dir, subject, lesion_image, age, filenameHash, image_type="T1w", threshold = 0):
   try:
     roundedAge = getRoundedAge(age)
-    createRunsDirectory(subject, runs_dir)
+    createControlSpaceDirectory(subject, runs_dir)
     createTemplateSpaceDirectory(roundedAge, runs_dir, subject)
 
 #       nibabel.load(<nifti image path>).get_fdata().shape
@@ -79,10 +84,10 @@ def step1A(runs_dir, subject, lesion_image, age, filenameHash, image_type="T1w",
     applySubjectLesionToControlImageWarp(runs_dir, subject, lesion_image, roundedAge, skip=True)
     generateVisitationMap(runs_dir, subject)
     warpVisitationMap(runs_dir, subject, image_type)
-    main(runs_dir, subject, image_type, filenameHash, threshold)
+    generateDisconnectome(runs_dir, subject, image_type, filenameHash, threshold)
   except Exception as e:
-    print("step1A failed: ", e)
-    return e
+    logger.exception("generate disconnectome failed", e)
+    return False
   else:
     return True
 
@@ -93,10 +98,10 @@ def step2(runs_dir, subject, lesion_image, age, filenameHash, threshold = 0, ima
     applySubjectLesionToControlImageWarp(runs_dir, subject, lesion_image, roundedAge)
     generateVisitationMap(runs_dir, subject)
     warpVisitationMap(runs_dir, subject, image_type)
-    main(runs_dir, subject, image_type, filenameHash, threshold)
+    generateDisconnectome(runs_dir, subject, image_type, filenameHash, threshold)
   except Exception as e:
-    print("step2 failed: ", e)
-    return e
+    logger.exception("generate disconnectome failed", e)
+    return False
   else:
     return True
 
