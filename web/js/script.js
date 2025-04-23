@@ -174,6 +174,7 @@ async function nextOne() {
 
       setOutputData("brainImageWarpedOutput", age, runsDir, subject)
       setOutputData("lesionImageWarpedOutput", age, runsDir, subject)
+      setOutputData("ageMatchedTemplateOutput",age, runsDir, subject, type)
 
       // remove loading state and re-enable inputs
       enableInputs(warpSubjectToAgeMatchedForm);
@@ -248,6 +249,10 @@ async function generateDisconnectome() {
       "../img/disconnectome_at_lesion_centroids_" + filenameHash + ".png";
 
     document.querySelector('#plotDisconnectomeAtLesionCentroids').parentElement.classList.remove("hide");
+
+    setOutputData("disconnectomeOutput", age, runsDir, subject)
+    setOutputData("lesionImageIn40wOutput", age, runsDir, subject)
+    setOutputData("40wTemplateImageOutput",age, runsDir, subject, type)
 
     // remove loading state and re-enable inputs
     stopLoading();
@@ -335,7 +340,7 @@ const btnsEvents = () => {
 };
 document.addEventListener("DOMContentLoaded", btnsEvents);
 
-function setOutputData(id, age, runsDir, subject) {
+function setOutputData(id, age, runsDir, subject, type = "T1w") {
   let outputDataElement;
   let val;
   let roundedAge = Math.round(age)
@@ -347,6 +352,8 @@ function setOutputData(id, age, runsDir, subject) {
   }
   const templateSpacePrefix = runsDir + "/" + subject + "/template_space/" + roundedAge + "W/"
   const templateSpaceSuffix = roundedAge + "-week-template-space-warped.nii.gz"
+
+  const disconnectomePrefix = runsDir + "/" + subject + "/disconnectome/"
   switch (id) {
     case "brainImageWarpedOutput":
       outputDataElement = document.getElementById("brainImageWarpedOutput")
@@ -355,6 +362,22 @@ function setOutputData(id, age, runsDir, subject) {
     case "lesionImageWarpedOutput":
       outputDataElement = document.getElementById("lesionImageWarpedOutput")
       val = templateSpacePrefix + "lesion_mask_" + templateSpaceSuffix
+      break;
+    case "ageMatchedTemplateOutput":
+      outputDataElement = document.getElementById("ageMatchedTemplateOutput")
+      val = runsDir.split("/runs")[0] + "/template/templates/week" + roundedAge + "_" + type + ".nii.gz"
+      break;
+    case "disconnectomeOutput":
+      outputDataElement = document.getElementById("disconnectomeOutput")
+      val = disconnectomePrefix + "disconnectome-threshold_0.nii.gz"
+      break;
+    case "lesionImageIn40wOutput":
+      outputDataElement = document.getElementById("lesionImageIn40wOutput")
+      val = disconnectomePrefix + "lesion_mask_40-week-template-space-warped.nii.gz"
+      break;
+    case "40wTemplateImageOutput":
+      outputDataElement = document.getElementById("40wTemplateImageOutput")
+      val = runsDir.split("/runs")[0] + "/template/templates/week40_" + type + ".nii.gz"
       break;
     default:
       break;

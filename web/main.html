@@ -24,7 +24,7 @@
       <div class="menu">
         <a href="https://github.com/sufkes/neonatal_disconnectome" target="_blank"
           class="pseudo button icon-github-circled">GitHub</a>
-        <button onclick="showLoading()">Show dialog</button>
+        <!-- <button onclick="showLoading()">Show dialog</button> -->
       </div>
     </nav>
     <main class="content">
@@ -165,7 +165,7 @@
             </div>
             <div class="third">
               <label for="gestationalAgeA" class="stack">
-                Subjects gestational age, in weeks:
+                Age of template to which lesion image is warped, in weeks:
                 <strong><span aria-label="required" class="required">*</span></strong>
               </label>
               <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAgeA"
@@ -270,7 +270,7 @@
             <p id="lesionImageWarpedOutput"></p>
           </details>
           <details name="outputData">
-            <summary class="grayscale">age-matched template image</summary>
+            <summary class="grayscale">age-matched template image(fixed image for warp step)</summary>
             <p id="ageMatchedTemplateOutput"></p>
           </details>
           <details name="outputData">

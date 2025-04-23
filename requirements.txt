@@ -1,9 +1,10 @@
 eel
 antspyx
-dipy
+dipy==1.9.0
 nibabel
 numpy==1.26.4
 pyinstaller
 matplotlib
 scikit-image
 pyside6
+click

@@ -177,6 +177,7 @@ def copyImageFiles(runs_dir:str, subject:str):
   subject : str
       The subject ID used to create the directory structure for current run
   """
+  logger.info("WEB_IMG_DIR: %s", WEB_IMG_DIR)
   src_files = os.listdir(WEB_IMG_DIR)
   thumbnail_dir = os.path.join(runs_dir, subject, THUMBNAILS)
   logger.debug("the thumbnail dir path is: %s", thumbnail_dir)

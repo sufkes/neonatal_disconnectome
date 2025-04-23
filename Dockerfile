@@ -17,7 +17,6 @@ RUN apt-get update \
   pkg-config \
   libhdf5-dev \
   python3-tk \
-  libqt4-dev \
   cmake \
   xvfb \
   libegl1-mesa \

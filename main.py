@@ -105,4 +105,4 @@ def step2(runs_dir, subject, lesion_image, age, filenameHash, threshold = 0, ima
   else:
     return True
 
-eel.start('main.html', size=(300, 200), mode='chrome-app', port=8080, cmdline_args=['--start-fullscreen', '--browser-startup-dialog'], host="0.0.0.0")    # Start
+eel.start('main.html', size=(300, 200), mode='chrome-app', port=0, cmdline_args=['--start-fullscreen', '--browser-startup-dialog'], host="0.0.0.0")    # Start
