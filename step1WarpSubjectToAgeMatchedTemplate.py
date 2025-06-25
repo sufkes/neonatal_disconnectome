@@ -2,7 +2,7 @@ import logging
 import os
 import ants
 
-from constants import TEMPLATE_TEMPLATES_DIR
+from constants import TEMPLATE_TEMPLATES_DIR, WEB_IMG_DIR
 from makeThumbnails import plotAlignedImagePair, plotLabelClustersOnBackground
 from utils import copyImageFiles, createTemplateSpaceDirectory
 
@@ -74,13 +74,16 @@ def warpSubjectToAgeMatchedTemplate(runs_dir, subject, image_type, moving_image,
     ## 8. Generate the thumbnails and save them
 
     alignedImage = 'plot_aligned_image_pair_'+ filenameHash + '.png'
-    plotAlignedImagePair(out_image_path, fixed_path, 'web/img/' + alignedImage)
+    full_file_name = os.path.join(WEB_IMG_DIR, alignedImage)
+    plotAlignedImagePair(out_image_path, fixed_path, full_file_name)
 
     clustersImage = 'lesion_on_age_matched_template_clusters_' + filenameHash + '.png'
-    plotLabelClustersOnBackground(out_lesion_path, fixed_path, 'web/img/' + clustersImage)
+    full_file_name = os.path.join(WEB_IMG_DIR, clustersImage)
+    plotLabelClustersOnBackground(out_lesion_path, fixed_path, full_file_name)
 
     clustersOriginalImage = 'lesion_on_original_' + filenameHash + '.png'
-    plotLabelClustersOnBackground(lesion_image, moving_image, 'web/img/' + clustersOriginalImage)
+    full_file_name = os.path.join(WEB_IMG_DIR, clustersOriginalImage)
+    plotLabelClustersOnBackground(lesion_image, moving_image, full_file_name)
 
     ## 9. Copy the generated thumbnails to the runs directory
     copyImageFiles(runs_dir, subject)

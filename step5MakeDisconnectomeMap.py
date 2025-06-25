@@ -6,7 +6,7 @@ import logging
 import os
 import nibabel as nib
 
-from constants import DISCONNECTOME, TEMPLATE_TEMPLATES_DIR, VISITATION_MAPS_40W
+from constants import DISCONNECTOME, TEMPLATE_TEMPLATES_DIR, VISITATION_MAPS_40W, WEB_IMG_DIR
 from makeThumbnails import plotDisconnectomeAtLesionCentroids
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,9 @@ def generateDisconnectome(runs_dir, subject, image_type, filenameHash, threshold
 
     fixed_path = os.path.join(TEMPLATE_TEMPLATES_DIR, 'week40_' + image_type + '.nii.gz')
     out_lesion_path = os.path.join(disconnectome_out_dir, 'lesion_mask_40-week-template-space-warped.nii.gz')
-    plotDisconnectomeAtLesionCentroids(fixed_path, out_path, out_lesion_path, 'web/img/disconnectome_at_lesion_centroids_' + filenameHash + '.png')
+    disconnectomeImage = 'disconnectome_at_lesion_centroids_' + filenameHash + '.png'
+    full_file_name = os.path.join(WEB_IMG_DIR, disconnectomeImage)
+    plotDisconnectomeAtLesionCentroids(fixed_path, out_path, out_lesion_path, full_file_name)
   except Exception as e:
     logger.exception("Generating disconnectome failed")
     raise e

@@ -1,7 +1,8 @@
 eel
+scipy==1.15.3
 antspyx
-dipy==1.9.0
 nibabel
+dipy==1.9.0
 numpy==1.26.4
 pyinstaller
 matplotlib

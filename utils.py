@@ -149,7 +149,7 @@ def getRoundedAge(age):
 def deleteImagefiles():
   """delete all image files from previous runs. This function is called everytime a new run is started
   """
-  for imageFile in os.listdir("web/img/"):
+  for imageFile in os.listdir(WEB_IMG_DIR):
     root, ext = os.path.splitext(imageFile)
     if (root.startswith('brain_image_thumbnail')
         or
@@ -161,7 +161,7 @@ def deleteImagefiles():
         or
         root.startswith('disconnectome_at_lesion_centroids')) and ext == '.png':
       try:
-        os.remove("web/img/"+imageFile)
+        os.remove(os.path.join(WEB_IMG_DIR,imageFile))
       except OSError as e:
         # If it fails, inform the user.
         logger.exception("failed to delete image files")

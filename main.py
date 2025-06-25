@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 import os
+from constants import WEB_IMG_DIR
 import eel
 
 from tkinter import *
@@ -44,7 +45,7 @@ def getFile(generateThumbnail = False, filename = 'brain_image_thumbnail.png'):
     filepath = os.path.abspath(file.name)
     if(generateThumbnail):
       # Generate Thumbnail image to preview original brain image
-      plotThreeView(filepath, "web/img/" + filename)
+      plotThreeView(filepath, os.path.join(WEB_IMG_DIR,filename))
   return filepath
 
 

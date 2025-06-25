@@ -54,6 +54,6 @@ install tkinter with homebrew
 
 # Build instructions
 
-python -m eel main.py web --windowed --noupx --add-data="./controls:controls" --add-data="./template:template" --hidden-import PIL._tkinter_finder --hidden-import PIL._imagingtk
-
-add --onefile --noconsole when happy with result
+1. Download the controls and template data folders to root of the project
+2. run following command `python -m eel main.py web --windowed --noupx --add-data="./controls:controls" --add-data="./template:template" --hidden-import PIL._tkinter_finder --hidden-import PIL._imagingtk`
+3. add --onefile --noconsole when happy with result in order to generate a single executable file
