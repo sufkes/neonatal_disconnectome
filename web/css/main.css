@@ -305,95 +305,26 @@ dialog footer {
   justify-content: center;
 }
 
-
-.circlePercent {
-  position: relative;
-  width: 6rem;
-  height: 6rem;
-  border-radius: 50%;
-  background: var(--color-primary);
+@keyframes spinner {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.circlePercent:before,
-.circlePercent>.progressEnd {
-  position: absolute;
-  z-index: 3;
-  top: 2px;
-  left: 45px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: white;
-  -ms-transform-origin: 3px 46px;
-  transform-origin: 3px 46px;
+.spinner::before {
   content: "";
-}
-
-.circlePercent:after,
-.circlePercent>.progress {
-  position: absolute;
-  -ms-transform-origin: 3rem 3rem;
-  transform-origin: 3rem 3rem;
-  z-index: 0;
-  top: 0;
-  left: 0;
-  width: 3rem;
-  height: 6rem;
-  border-radius: 3rem 0 0 3rem;
-  background: var(--color-primary);
-  content: "";
-}
-
-.circlePercent.fiftyPlus:after {
-  background: white;
-  -ms-transform: rotate(180deg);
-  transform: rotate(180deg);
-}
-
-.circlePercent>.progress.progress {
-  background: white;
-}
-
-.circlePercent>.counter {
-  position: absolute;
   box-sizing: border-box;
-  z-index: 2;
-  width: 100px;
-  height: 100px;
-  margin-top: -2px;
-  margin-left: -2px;
-  border-radius: 50%;
-  border: 4px solid var(--color-primary);
-}
-
-.circlePercent>.counter:before {
   position: absolute;
-  z-index: 1;
-  top: 50%;
-  margin-top: -13px;
-  width: 100%;
-  height: 26px;
-  font-size: 26px;
-  line-height: 26px;
-  font-family: sans-serif;
-  text-align: center;
-  color: white;
-  content: attr(data-percent) "%";
-}
-
-.circlePercent>.counter:after {
-  position: absolute;
-  width: 80px;
-  height: 80px;
-  top: 6px;
-  left: 6px;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  margin-left: -12px;
   border-radius: 50%;
-  background: var(--color-primary);
-  content: "";
-}
-
-.circlePercent>.counter[data-percent="100"] {
-  background: white;
+  border: 2px solid transparent;
+  border-top-color: #07d;
+  border-bottom-color: #07d;
+  animation: spinner 800ms ease infinite;
 }
 
 

@@ -2,12 +2,10 @@ services:
   app:
     build:
       context: .
-    environment:
-      DISPLAY: unix$DISPLAY
     ports:
       - "8080:8080"
     tty: true
     volumes:
       - .:/app
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ~/.Xauthority:/home/.Xauthority
+      - $HOME/.Xauthority:/home/.Xauthority

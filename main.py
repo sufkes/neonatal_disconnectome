@@ -1,6 +1,8 @@
 import logging
 from pathlib import Path
 import os
+import platform
+import sys
 from constants import WEB_IMG_DIR
 import eel
 
@@ -24,13 +26,23 @@ eel.init(str(Path(__file__).parent / "web"),
         allowed_extensions=[".html", ".js", ".css", ".woff", ".svg", ".svgz", ".png"])
         # Give folder containing web files
 
+saved_folder = ""  # global variable to store folder path
+
 @eel.expose
 def getFolder():
+  global saved_folder
   root = Tk()
   root.withdraw()
   root.wm_attributes('-topmost', 1)
   folder = fdialog.askdirectory()
+  if folder:
+    saved_folder = folder
   return folder
+
+
+@eel.expose
+def get_saved_folder():
+  return saved_folder
 
 @eel.expose
 def getFile(generateThumbnail = False, filename = 'brain_image_thumbnail.png'):
@@ -38,7 +50,7 @@ def getFile(generateThumbnail = False, filename = 'brain_image_thumbnail.png'):
   root.withdraw()
   root.wm_attributes('-topmost', 1)
   file = None
-  file = fdialog.askopenfile(mode='r', filetypes=[('NIFTI Files', '*.nii.gz')])
+  file = fdialog.askopenfile(mode='r')
   root.destroy()
   filepath = ""
   if file:
@@ -106,4 +118,7 @@ def step2(runs_dir, subject, lesion_image, age, filenameHash, threshold = 0, ima
   else:
     return True
 
-eel.start('main.html', size=(300, 200), mode='chrome-app', port=0, cmdline_args=['--start-fullscreen', '--browser-startup-dialog'], host="0.0.0.0")    # Start
+if sys.platform in ['win32', 'win64'] and int(platform.release()) >= 10:
+  eel.start('main.html', port=0, host="0.0.0.0", mode="edge")    # Start
+else:
+  eel.start('main.html', port=0, host="0.0.0.0", mode="chrome-app")

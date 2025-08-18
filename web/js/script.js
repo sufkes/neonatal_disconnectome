@@ -8,13 +8,14 @@ const form1a = document.getElementById("form1a");
 const generateDisconnectomeForm = document.getElementById("generateDisconnectomeForm");
 const finalResult = document.getElementById("result");
 
+const nextButton = document.getElementById("next");
+
 
 /* Input fields Elements */
 const runsInputField = document.getElementById("runsFolder");
 
 /* Modal Elements */
 const loadingModal = document.getElementById("loadingModal");
-const circleLoader = document.getElementById('circlePercentLoader');
 
 let percent = 0;
 let subject;
@@ -26,15 +27,32 @@ let age;
 let skipStepOne = false;
 let currentForm = "startNewRunForm"
 
+let runsFolder = ""
+
 //================= file Events ===================
 
 async function getFolder(event) {
   event.preventDefault();
   const folder_path = await eel.getFolder()();
   if (folder_path.length) {
+    runsFolder = folder_path
     runsInputField.value = folder_path
   }
 }
+
+async function showSavedFolder() {
+  try {
+      const folderPath = await eel.get_saved_folder()();
+      // Optionally display in the UI
+      document.getElementById('runsFolder').value = folderPath || "No folder selected yet";
+  } catch (error) {
+      console.error("Error getting saved folder:", error);
+  }
+}
+
+window.onload = function() {
+  showSavedFolder();
+};
 
 async function getFile(event) {
   event.preventDefault();
@@ -88,6 +106,15 @@ function validateInputs(ths) {
         inputs[i].nextElementSibling.classList.remove("label")
       }
     }
+    if(inputs[i].id === "subjectID" || inputs[i].id === "subjectIDA") {
+      if(inputs[i].validity.patternMismatch) {
+        inputs[i].nextElementSibling.innerText = "Only letters and numbers allowed. No special characters"
+        inputs[i].nextElementSibling.classList.add("label")
+      } else {
+        inputs[i].nextElementSibling.innerText = ""
+        inputs[i].nextElementSibling.classList.remove("label")
+      }
+    }
     if (!valid) {
       inputsValid = false;
       inputs[i].reportValidity();
@@ -130,8 +157,7 @@ async function startRun() {
       showForm(warpSubjectToAgeMatchedForm)
       currentForm = "warpSubjectToAgeMatchedForm"
     }
-    document.getElementById("back").classList.remove("hide")
-    document.getElementById("next").setAttribute("form", currentForm)
+    nextButton.setAttribute("form", currentForm)
   }
 }
 
@@ -178,7 +204,7 @@ async function nextOne() {
 
       // remove loading state and re-enable inputs
       enableInputs(warpSubjectToAgeMatchedForm);
-      document.getElementById("next").setAttribute("form", currentForm)
+      nextButton.setAttribute("form", currentForm)
       stopLoading();
     } else {
       // TODO: Show error
@@ -208,6 +234,7 @@ async function nextOneA() {
 
     if (result) {
       formHeaderText.innerText = "Run Finished";
+      nextButton.classList.add("hide")
       hideForm(form1a)
       finalResult.style.left = "25px";
       finalResult.style.setProperty('display', 'block')
@@ -216,6 +243,8 @@ async function nextOneA() {
 
       document.querySelector('#plotDisconnectomeAtLesionCentroids').parentElement.classList.remove("hide");
 
+      setOutputData("disconnectomeOutput", age, runsDir, subject)
+      setOutputData("lesionImageIn40wOutput", age, runsDir, subject)
       // remove loading state and re-enable inputs
       enableInputs(form1a);
       stopLoading();
@@ -238,8 +267,7 @@ async function generateDisconnectome() {
     formHeaderText.innerText = "Run Finished";
     hideForm(generateDisconnectomeForm)
 
-    document.getElementById("back").classList.add("hide")
-    document.getElementById("next").classList.add("hide")
+    nextButton.classList.add("hide")
 
     finalResult.style.left = "25px";
     finalResult.style.setProperty('display', 'block')
@@ -261,25 +289,6 @@ async function generateDisconnectome() {
   }
 }
 
-//=============== Previous Step ==================
-function previousStep(currentForm, previousForm, headerText) {
-  // hide current form
-  currentForm.style.setProperty('left', 'calc(var(--containerWidth) + 50px)');
-  currentForm.style.setProperty('display', 'none')
-  currentForm.classList.remove("active")
-
-  // show previous form
-  previousForm.style.left = "25px";
-  previousForm.style.setProperty('display', 'block')
-  previousForm.classList.add("active")
-
-  // update card header text
-  formHeaderText.innerText = headerText;
-
-  // update card footer buttons
-  document.getElementById("next").setAttribute("form", previousForm.id)
-
-}
 
 //================= btn Events ===================
 
@@ -306,37 +315,12 @@ function next(event) {
 
 }
 
-function back(event) {
-  event.preventDefault();
-  switch (currentForm) {
-    case "warpSubjectToAgeMatchedForm":
-      previousStep(warpSubjectToAgeMatchedForm, startNewRunForm, "Start a new run")
-      document.getElementById("back").classList.add("hide")
-      break;
-    case "form1a":
-      previousStep(form1a, startNewRunForm, "Start a new run")
-      document.getElementById("back").classList.add("hide")
-      break;
-    case "generateDisconnectomeForm":
-      const text = skipStepOne ? "Generate Disconnectome" : "Warp Subject Image and Lesion Mask To Age Matched Template"
-      previousStep(generateDisconnectomeForm, skipStepOne ? form1a : warpSubjectToAgeMatchedForm, text)
-      break;
-    default:
-      break;
-  }
-}
+
 
 
 const btnsEvents = () => {
-  const nextButton = document.getElementById("next");
-  const backButton = document.getElementById("back");
-
   // next
   nextButton.addEventListener("click", next);
-
-  // back
-  backButton.addEventListener("click", back);
-
 };
 document.addEventListener("DOMContentLoaded", btnsEvents);
 
@@ -428,30 +412,19 @@ function setProgress(elem, percent) {
 
 }
 
-function animate() {
-  setProgress(circleLoader, (percent += .06));
-  if(percent < 100) {
-    setTimeout(animate, 15);
-  }
-}
 
 function showLoading(modalText = "Computing Result") {
-  percent = 0
-  circleLoader.classList.remove("fiftyPlus")
   document.getElementById("loadingModalLabel").classList.add("hide")
   document.getElementById("loadingModalClose").classList.add("hide")
 
   document.getElementById("loadingModalContent").innerHTML = `
   ${modalText}
-  <p>This computation will take approximately 30s - 1min</p>
+  <p>This computation will take approximately 30s - 2min</p>
   `
-  document.getElementById("circlePercentLoader").classList.remove("hide")
   loadingModal.showModal();
-  animate();
 }
 
 function stopLoading() {
-  percent = 100
   loadingModal.close();
 }
 

@@ -22,6 +22,7 @@
       <label for="bmenub" class="burger pseudo button">menu</label>
 
       <div class="menu">
+        <a href="main.html">Start a new run</a>
         <a href="https://github.com/sufkes/neonatal_disconnectome" target="_blank"
           class="pseudo button icon-github-circled">GitHub</a>
         <!-- <button onclick="showLoading()">Show dialog</button> -->
@@ -36,16 +37,14 @@
         <section id="loadingModalContent">
         </section>
         <footer>
-          <div id="circlePercentLoader" class="circlePercent">
-            <div class="counter" data-percent="0"></div>
-            <div class="progress"></div>
-            <div class="progressEnd"></div>
+          <div class="spinner">
           </div>
         </footer>
       </dialog>
-      <article id="mainContainer" class="container card">
+      <article id="mainContainer" class="card">
         <header>
           <h2 id="formHeaderText">Start a new run</h2>
+          <button class="next" id="next" form="startNewRunForm">Next</button>
         </header>
         <form class="row active" id="startNewRunForm">
           <fieldset class="flex one">
@@ -73,7 +72,7 @@
             </div>
           </fieldset>
         </form>
-        <form id="warpSubjectToAgeMatchedForm">
+        <form id="warpSubjectToAgeMatchedForm" enctype="multipart/form-data">
           <h4>Image Data</h4>
           <fieldset class="flex one">
             <div>
@@ -127,7 +126,8 @@
                 <strong><span aria-label="required" class="required">*</span></strong>
               </label>
               <input type="text" name="subject" id="subjectID" placeholder="e.g. CC00034XX09"
-                onchange="setInputData(event)" required />
+                onchange="setInputData(event)" pattern="[a-zA-Z0-9]+" required />
+              <span class="warning"></span>
             </div>
             <div class="third">
               <label for="gestationalAge" class="stack">
@@ -161,9 +161,10 @@
                 <strong><span aria-label="required" class="required">*</span></strong>
               </label>
               <input type="text" name="subject" id="subjectIDA" placeholder="e.g. CC00034XX09"
-                onchange="setInputData(event)" required />
+                onchange="setInputData(event)" pattern="[a-zA-Z0-9]+" required />
+              <span class="warning"></span>
             </div>
-            <div class="third">
+            <div class="">
               <label for="gestationalAgeA" class="stack">
                 Age of template to which lesion image is warped, in weeks:
                 <strong><span aria-label="required" class="required">*</span></strong>
@@ -222,12 +223,6 @@
             </figcaption>
           </figure>
         </div>
-        <footer>
-          <button class="error hide" id="back" type="button">Back</button>
-          <button class="right next" id="next" form="startNewRunForm">Next</button>
-        </footer>
-
-
       </article>
       <aside class="container card output">
         <header>
