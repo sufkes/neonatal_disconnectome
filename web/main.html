@@ -47,102 +47,104 @@
           <button class="next" id="next" form="startNewRunForm">Next</button>
         </header>
         <form class="row active" id="startNewRunForm">
-          <fieldset class="flex one">
-            <div class="">
-              <label class="stack" for="runsFolder">
-                Please select the folder where the output for this run will be saved to
-              </label>
-              <div class="file">
-                <div class="fileButton" onclick="getFolder(event)">Browse...</div>
-                <input class="fileInput" type="text" name="runsFolder" id="runsFolder" placeholder="No folder selected."
-                  required autocomplete="off" onkeydown="return false;" onpaste="return false;"
-                  ondrop="return false;" />
-              </div>
+          <div class="form-group">
+            <label class="stack" for="runsFolder">
+              Please select the folder where the output for this run will be saved to
+            </label>
+            <div class="file">
+              <div class="fileButton" onclick="getFolder(event)">Browse...</div>
+              <input class="fileInput" type="text" name="runsFolder" id="runsFolder" placeholder="No folder selected."
+                required autocomplete="off" onkeydown="return false;" onpaste="return false;" ondrop="return false;" />
             </div>
-            <div>
-              <legend>Is the lesion map already warped to DHCP template image?</legend>
-              <label for="yes">
-                <input type="radio" value="yes" name="skipStep1" id="yes" required />
-                <span class="checkable">YES</span>
-              </label>
-              <label for="no">
-                <input type="radio" value="no" name="skipStep1" id="no" required />
-                <span class="checkable">NO</span>
-              </label>
-            </div>
-          </fieldset>
+            <div class="error" id="runsFolderError" role="alert">Please enter a valid runs folder</div>
+          </div>
+          <div class="form-group">
+            <legend>Is the lesion map already warped to DHCP template image?</legend>
+            <label for="yes">
+              <input type="radio" value="yes" name="skipStep1" id="yes" required />
+              <span class="checkable">YES</span>
+            </label>
+            <label for="no">
+              <input type="radio" value="no" name="skipStep1" id="no" required />
+              <span class="checkable">NO</span>
+            </label>
+            <div class="error" id="skipStep1Error" role="alert">Please select an option</div>
+          </div>
         </form>
         <form id="warpSubjectToAgeMatchedForm" enctype="multipart/form-data">
+          <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-fill"></div>
+          </div>
           <h4>Image Data</h4>
-          <fieldset class="flex one">
-            <div>
-              <label for="3DBrainImage" class="stack">
-                3D Brain Image in NIFTI Format
-              </label>
-              <div class="file">
-                <div class="fileButton" onclick="getFile(event)">Browse...</div>
-                <input class="fileInput" type="text" name="brainImage" id="3DBrainImage" placeholder="No file selected."
-                  required autocomplete="off" onkeypress="return false;" onpaste="return false;"
-                  ondrop="return false;" />
-              </div>
-              <figure class="hide">
-                <img id="3DBrainImageThumbnail" src=""
-                  alt="Preview of the original brain image (T1 or T2) that the user uploaded as a 1x3 grid of images of the middle planes in the sagittal, coronal, and axial views" />
-                <figcaption>
-                  Preview of the original brain image as a 1x3 grid of images of the middle planes in the sagittal,
-                  coronal, and axial views
-                </figcaption>
-              </figure>
+          <div class="form-group">
+            <label for="3DBrainImage" class="stack">
+              3D Brain Image in NIFTI Format
+            </label>
+            <div class="file">
+              <div class="fileButton" onclick="getFile(event)">Browse...</div>
+              <input class="fileInput" type="text" name="brainImage" id="3DBrainImage" placeholder="No file selected."
+                required autocomplete="off" onkeypress="return false;" onpaste="return false;" ondrop="return false;" />
             </div>
+            <div class="error" id="3DBrainImageError" role="alert">Please enter a valid brain image</div>
+            <figure class="hide" id="3DBrainImageFigure">
+              <img id="3DBrainImageThumbnail" src=""
+                alt="Preview of the original brain image (T1 or T2) that the user uploaded as a 1x3 grid of images of the middle planes in the sagittal, coronal, and axial views" />
+              <figcaption>
+                Preview of the original brain image as a 1x3 grid of images of the middle planes in the sagittal,
+                coronal, and axial views
+              </figcaption>
+            </figure>
+          </div>
 
-            <div>
-              <label for="3DBrainLesionMask" class="stack">
-                3D Brain Lesion Mask in NIFTI Format
-              </label>
-              <div class="file">
-                <div class="fileButton" onclick="getFile(event)">Browse...</div>
-                <input class="fileInput" type="text" name="brainLesionMask" id="3DBrainLesionMask"
-                  placeholder="No file selected." required autocomplete="off" onkeypress="return false;"
-                  onpaste="return false;" ondrop="return false;" />
-              </div>
+          <div class="form-group">
+            <label for="3DBrainLesionMask" class="stack">
+              3D Brain Lesion Mask in NIFTI Format
+            </label>
+            <div class="file">
+              <div class="fileButton" onclick="getFile(event)">Browse...</div>
+              <input class="fileInput" type="text" name="brainLesionMask" id="3DBrainLesionMask"
+                placeholder="No file selected." required autocomplete="off" onkeypress="return false;"
+                onpaste="return false;" ondrop="return false;" />
             </div>
-            <div class="third">
-              <label for="brainType" class="stack">
-                <span>Select type of brain image:</span>
-                <select name="type" id="brainType" onchange="setInputData(event)" required>
-                  <option hidden disabled selected value> -- select an option -- </option>
-                  <option value="T1w">T1w</option>
-                  <option value="T2w">T2w</option>
-                </select>
-              </label>
-            </div>
-          </fieldset>
-
+            <div class="error" id="3DBrainLesionMaskError" role="alert">Please enter a valid lesion mask</div>
+          </div>
+          <div class="third form-group">
+            <label for="brainType" class="stack">
+              <span>Select type of brain image:</span>
+              <select name="type" id="brainType" onchange="setInputData(event)" required>
+                <option hidden disabled selected value> -- select an option -- </option>
+                <option value="T1w">T1w</option>
+                <option value="T2w">T2w</option>
+              </select>
+            </label>
+            <div class="error" id="brainTypeError" role="alert">Please select the brain type</div>
+          </div>
           <h4>Subject data</h4>
-          <fieldset class="flex one two-800">
-            <div class="third">
-              <label for="subjectID" class="stack">
-                Subject ID:
-                <strong><span aria-label="required" class="required">*</span></strong>
-              </label>
-              <input type="text" name="subject" id="subjectID" placeholder="e.g. CC00034XX09"
-                onchange="setInputData(event)" pattern="[a-zA-Z0-9]+" required />
-              <span class="warning"></span>
-            </div>
-            <div class="third">
-              <label for="gestationalAge" class="stack">
-                Subjects gestational age, in weeks:
-                <strong><span aria-label="required" class="required">*</span></strong>
-              </label>
-              <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAge"
-                onchange="setInputData(event)" required />
-              <span class="warning"></span>
-            </div>
-          </fieldset>
+          <div class="form-group">
+            <label for="subjectID" class="stack">
+              Subject ID:
+              <strong><span aria-label="required" class="required">*</span></strong>
+            </label>
+            <input type="text" name="subject" id="subjectID" placeholder="e.g. CC00034XX09"
+              onchange="setInputData(event)" pattern="[a-zA-Z0-9]+" required />
+            <div class="error" id="subjectIDError" role="alert">Please enter a valid subject id. Only letters and
+              numbers allowed. No special characters and no spaces</div>
+          </div>
+          <div class="form-group">
+            <label for="gestationalAge" class="stack">
+              Subjects gestational age, in weeks:
+              <strong><span aria-label="required" class="required">*</span></strong>
+            </label>
+            <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAge"
+              onchange="setInputData(event)" required />
+            <div class="error" id="gestationalAgeError" role="alert">Warning: Age is outside of 28-44 weeks.
+              Registration to template may be poor. Check registration quality in external
+              image viewer.</div>
+          </div>
         </form>
         <form id="form1a">
           <h4>Image Data</h4>
-          <fieldset class="flex one">
+          <div class="form-group">
             <label for="lesionImage" class="stack">
               Lesion image already warped to template space
             </label>
@@ -151,29 +153,32 @@
               <input class="fileInput" type="text" name="lesionImage" id="lesionImage" placeholder="No file selected."
                 required autocomplete="off" onkeypress="return false;" onpaste="return false;" ondrop="return false;" />
             </div>
-          </fieldset>
+            <div class="error" id="lesionImageError" role="alert">Please enter a valid lesion image</div>
+          </div>
 
           <h4>Subject data</h4>
-          <fieldset class="flex one two-800">
-            <div class="third">
-              <label for="subjectIDA" class="stack">
-                Subject ID:
-                <strong><span aria-label="required" class="required">*</span></strong>
-              </label>
-              <input type="text" name="subject" id="subjectIDA" placeholder="e.g. CC00034XX09"
-                onchange="setInputData(event)" pattern="[a-zA-Z0-9]+" required />
-              <span class="warning"></span>
-            </div>
-            <div class="">
-              <label for="gestationalAgeA" class="stack">
-                Age of template to which lesion image is warped, in weeks:
-                <strong><span aria-label="required" class="required">*</span></strong>
-              </label>
-              <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAgeA"
-                onchange="setInputData(event)" required />
-              <span class="warning"></span>
-            </div>
-          </fieldset>
+          <div class="form-group">
+            <label for="subjectIDA" class="stack">
+              Subject ID:
+              <strong><span aria-label="required" class="required">*</span></strong>
+            </label>
+            <input type="text" name="subject" id="subjectIDA" placeholder="e.g. CC00034XX09"
+              onchange="setInputData(event)" pattern="[a-zA-Z0-9]+" required />
+            <div class="error" id="subjectIDAError" role="alert">Please enter a valid subject id. Only letters and
+              numbers allowed. No special characters and no spaces</div>
+
+          </div>
+          <div class="form-group">
+            <label for="gestationalAgeA" class="stack">
+              Age of template to which lesion image is warped, in weeks:
+              <strong><span aria-label="required" class="required">*</span></strong>
+            </label>
+            <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAgeA"
+              onchange="setInputData(event)" required />
+            <div class="error" id="gestationalAgeAError" role="alert">Warning: Age is outside of 28-44 weeks.
+              Registration to template may be poor. Check registration quality in external
+              image viewer.</div>
+          </div>
         </form>
         <form id="generateDisconnectomeForm">
           <h2>Subject warped to age matched template <span class="label success">Success</span></h2>
@@ -230,53 +235,53 @@
         </header>
         <div class="">
           <h3>Input Data</h3>
-          <details name="inputData">
+          <details name="inputData" class="hide">
             <summary class="grayscale">Original 3D Brain Image</summary>
             <p id="brainImageInput"></p>
           </details>
-          <details name="inputData">
+          <details name="inputData" class="hide">
             <summary class="grayscale">Original 3D Brain Lesion Mask</summary>
             <p id="brainLesionMaskInput"></p>
           </details>
-          <details name="inputData">
+          <details name="inputData" class="hide">
             <summary class="grayscale">Lesion Image already warped</summary>
             <p id="lesionInput"></p>
           </details>
-          <details name="inputData">
+          <details name="inputData" class="hide">
             <summary class="grayscale">3D Brain Image Type</summary>
             <p id="typeInput"></p>
           </details>
-          <details name="inputData">
+          <details name="inputData" class="hide">
             <summary class="grayscale">Subject ID</summary>
             <p id="subjectInput"></p>
           </details>
-          <details name="inputData">
+          <details name="inputData" class="hide">
             <summary class="grayscale">Subjects gestational age, in weeks</summary>
             <p id="ageInput"></p>
           </details>
 
-          <h4>Output data</h4>
-          <details name="outputData">
+          <h3>Output data</h3>
+          <details name="outputData" class="hide">
             <summary class="grayscale">input brain image warped to age-matched template</summary>
             <p id="brainImageWarpedOutput"></p>
           </details>
-          <details name="outputData">
+          <details name="outputData" class="hide">
             <summary class="grayscale">input lesion image warped to age-matched template</summary>
             <p id="lesionImageWarpedOutput"></p>
           </details>
-          <details name="outputData">
+          <details name="outputData" class="hide">
             <summary class="grayscale">age-matched template image(fixed image for warp step)</summary>
             <p id="ageMatchedTemplateOutput"></p>
           </details>
-          <details name="outputData">
+          <details name="outputData" class="hide">
             <summary class="grayscale">disconnectome map in 40w template space</summary>
             <p id="disconnectomeOutput"></p>
           </details>
-          <details name="outputData">
+          <details name="outputData" class="hide">
             <summary class="grayscale">lesion image in 40w template space</summary>
             <p id="lesionImageIn40wOutput"></p>
           </details>
-          <details name="outputData">
+          <details name="outputData" class="hide">
             <summary class="grayscale">40w template image</summary>
             <p id="40wTemplateImageOutput"></p>
           </details>

@@ -10,6 +10,9 @@ const finalResult = document.getElementById("result");
 
 const nextButton = document.getElementById("next");
 
+let inputs = startNewRunForm.querySelectorAll('input, select');
+const progressBar = document.querySelector('.progress-fill');
+
 
 /* Input fields Elements */
 const runsInputField = document.getElementById("runsFolder");
@@ -61,9 +64,10 @@ async function getFile(event) {
   const file_path = await eel.getFile(element.id === "3DBrainImage", filename)();
   if (file_path) {
     element.value = file_path
+    validateInput(element)
     let inputDataElement;
     if(element.id === "3DBrainImage") {
-      const parent = element.parentElement.nextElementSibling
+      const parent = document.getElementById("3DBrainImageFigure")
       parent.children[0].src = "../img/" + filename;
       parent.classList.remove("hide")
       inputDataElement = document.getElementById("brainImageInput")
@@ -75,10 +79,74 @@ async function getFile(event) {
     inputDataElement.innerText = file_path
     inputDataElement.previousElementSibling.classList.remove("grayscale")
     inputDataElement.previousElementSibling.classList.add("success")
+    inputDataElement.parentNode.classList.remove("hide")
   }
 }
 
 //=============== Form utils ==================
+
+function updateProgress() {
+    const totalFields = inputs.length;
+    let completedFields = 0;
+
+    inputs.forEach(input => {
+        if (input.value.length > 0) completedFields++;
+    });
+
+    const progress = (completedFields / totalFields) * 100;
+    progressBar.style.width = `${progress}%`;
+    progressBar.parentElement.setAttribute('aria-valuenow', progress);
+}
+
+function validateInput(input) {
+    let errorElement = document.getElementById(`${input.id}Error`);
+    let isValid = true;
+
+    if (input.id === "gestationalAge" || input.id === "gestationalAgeA") {
+      if(input.value < 28 || input.value > 44) {
+        isValid = false
+      }
+    } else if (input.id === "subjectID" || input.id === "subjectIDA") {
+      const subjectIDRegex = /^[a-zA-Z0-9]+$/;
+      isValid = subjectIDRegex.test(input.value);
+    } else if(input.type === "radio") {
+      const radioButtons = document.querySelectorAll(`input[name="${input.name}"]`);
+      for (const radioButton of radioButtons) {
+        if (radioButton.checked) {
+          isValid = true
+          break;
+        } else {
+          isValid = false;
+        }
+      }
+      errorElement = document.getElementById(`${input.name}Error`);
+    } else {
+      isValid = input.value.length > 0;
+    }
+
+    if (!isValid) {
+        input.classList.remove('valid');
+        input.classList.add('invalid');
+        errorElement?.classList.add('visible');
+    } else {
+        input.classList.remove('invalid');
+        input.classList.add('valid');
+        errorElement?.classList.remove('visible');
+    }
+
+    updateProgress();
+    return isValid;
+}
+
+const inputsEvents = () => {
+  inputs.forEach(input => {
+    input.addEventListener('blur', () => validateInput(input));
+    input.addEventListener('input', () => validateInput(input));
+  });
+};
+document.addEventListener("DOMContentLoaded", inputsEvents);
+
+
 
 function disableInputs(form) {
   [...form.elements].forEach(element => {
@@ -92,38 +160,21 @@ function enableInputs(form) {
   });
 }
 function validateInputs(ths) {
-  let inputsValid = true;
-  const inputs = ths.querySelectorAll("input");
+  let isFormValid = true;
+  const inputs = ths.querySelectorAll("input, select");
 
-  for (let i = 0; i < inputs.length; i++) {
-    let valid = inputs[i].checkValidity();
-    if(inputs[i].id === "gestationalAge" || inputs[i].id === "gestationalAgeA") {
-      if(inputs[i].value < 28 || inputs[i].value > 48) {
-        inputs[i].nextElementSibling.innerText = "Age outside of range: 28-48"
-        inputs[i].nextElementSibling.classList.add("label")
-      } else {
-        inputs[i].nextElementSibling.innerText = ""
-        inputs[i].nextElementSibling.classList.remove("label")
-      }
+  inputs.forEach(input => {
+    if (!validateInput(input) || !input.checkValidity()) {
+        isFormValid = false;
     }
-    if(inputs[i].id === "subjectID" || inputs[i].id === "subjectIDA") {
-      if(inputs[i].validity.patternMismatch) {
-        inputs[i].nextElementSibling.innerText = "Only letters and numbers allowed. No special characters"
-        inputs[i].nextElementSibling.classList.add("label")
-      } else {
-        inputs[i].nextElementSibling.innerText = ""
-        inputs[i].nextElementSibling.classList.remove("label")
-      }
-    }
-    if (!valid) {
-      inputsValid = false;
-      inputs[i].reportValidity();
-      inputs[i].classList.add("invalid-input");
-    } else {
-      inputs[i].classList.remove("invalid-input");
-    }
+  });
+
+  if (isFormValid) {
+    progressBar.style.width = '0%';
+    inputs.forEach(input => input.classList.remove('valid'));
   }
-  return inputsValid;
+
+  return isFormValid;
 }
 
 function hideForm(form) {
@@ -151,12 +202,15 @@ async function startRun() {
       skipStepOne = true
       showForm(form1a)
       currentForm = "form1a"
+      inputs = form1a.querySelectorAll('input, select');
     } else {
       formHeaderText.innerText = "Warp Subject Image and Lesion Mask To Age Matched Template";
       skipStepOne = false
       showForm(warpSubjectToAgeMatchedForm)
       currentForm = "warpSubjectToAgeMatchedForm"
+      inputs = warpSubjectToAgeMatchedForm.querySelectorAll('input, select');
     }
+    inputsEvents()
     nextButton.setAttribute("form", currentForm)
   }
 }
@@ -186,6 +240,7 @@ async function nextOne() {
       hideForm(warpSubjectToAgeMatchedForm)
       showForm(generateDisconnectomeForm)
       currentForm = "generateDisconnectomeForm"
+      inputs = generateDisconnectomeForm.querySelectorAll('input, select');
 
       const figure1 = document.getElementById("plotAlignedImagePair")
       const figure2 = document.getElementById("lesionOnOriginalTemplateClusters")
@@ -204,6 +259,7 @@ async function nextOne() {
 
       // remove loading state and re-enable inputs
       enableInputs(warpSubjectToAgeMatchedForm);
+      inputsEvents()
       nextButton.setAttribute("form", currentForm)
       stopLoading();
     } else {
@@ -397,20 +453,9 @@ function updateRunData(element, value) {
   element.innerText = value
   element.previousElementSibling.classList.remove("grayscale")
   element.previousElementSibling.classList.add("success")
+  element.parentNode.classList.remove("hide")
 }
 
-
-function setProgress(elem, percent) {
-  const degrees = percent * 3.6;
-  const transform = /MSIE 9/.test(navigator.userAgent) ? 'msTransform' : 'transform';
-  elem.querySelector('.counter').setAttribute('data-percent', Math.round(percent));
-  elem.querySelector('.progressEnd').style[transform] = 'rotate(' + degrees + 'deg)';
-  elem.querySelector('.progress').style[transform] = 'rotate(' + degrees + 'deg)';
-  if(percent >= 50 && !elem.classList.contains("fiftyPlus")) {
-    elem.classList.add('fiftyPlus');
-  }
-
-}
 
 
 function showLoading(modalText = "Computing Result") {

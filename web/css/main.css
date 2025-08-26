@@ -127,13 +127,94 @@ form.active:invalid~footer #next {
   opacity: 0.3;
 }
 
-input:invalid,
-select:invalid {}
-
-form:invalid {}
+.form-group {
+  margin-bottom: 1.5rem;
+  position: relative;
+}
 
 .invalid-input {
   background-color: #ffdddd;
+}
+
+.progress-bar {
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+input.invalid {
+  border-color: var(--color-error);
+  background: #fef2f2;
+  animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+}
+
+@keyframes shake {
+
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+
+  30%,
+  50%,
+  70% {
+    transform: translateX(-4px);
+  }
+
+  40%,
+  60% {
+    transform: translateX(4px);
+  }
+}
+
+input.valid {
+  border-color: var(--color-success);
+  animation: success 0.5s ease;
+}
+
+@keyframes success {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.02);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.error {
+  position: absolute;
+  color: var(--color-error);
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: none;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+}
+
+.error.visible {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .container {}
@@ -171,7 +252,6 @@ form:invalid {}
   border-color: var(--color-bg-secondary);
   border-style: solid;
   padding: 0.4rem 0.8rem;
-  max-width: var(--width-card-wide);
   width: 100%;
   margin-bottom: 1rem;
 }
