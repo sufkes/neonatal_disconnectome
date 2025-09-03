@@ -36,11 +36,17 @@ let runsFolder = ""
 
 async function getFolder(event) {
   event.preventDefault();
+  const button = event.target;
+
+  button.style.pointerEvents = 'none'; // disables further clicks
+  button.style.opacity = '0.5'; // optional: visually indicate disabled state
   const folder_path = await eel.getFolder()();
   if (folder_path.length) {
     runsFolder = folder_path
     runsInputField.value = folder_path
   }
+  button.style.pointerEvents = 'auto'; // re-enable clicks
+  button.style.opacity = '1';           // reset visual
 }
 
 async function showSavedFolder() {
@@ -61,6 +67,14 @@ async function getFile(event) {
   event.preventDefault();
   const element = event.target.nextElementSibling
   const filename = "brain_image_thumbnail_"+ Date.now() + ".png"
+  const elements = document.getElementsByClassName('fileButton');
+
+  for (var i = 0; i < elements.length; i++) {
+    elements[i].style.pointerEvents = 'none'; // disables further clicks
+    elements[i].style.opacity = '0.5'; // optional: visually indicate disabled state
+  }
+
+
   const file_path = await eel.getFile(element.id === "3DBrainImage", filename)();
   if (file_path) {
     element.value = file_path
@@ -81,6 +95,11 @@ async function getFile(event) {
     inputDataElement.previousElementSibling.classList.add("success")
     inputDataElement.parentNode.classList.remove("hide")
   }
+  for (var i = 0; i < elements.length; i++) {
+    elements[i].style.pointerEvents = 'auto'; // re-enable clicks
+    elements[i].style.opacity = '1';           // reset visual
+  }
+
 }
 
 //=============== Form utils ==================
