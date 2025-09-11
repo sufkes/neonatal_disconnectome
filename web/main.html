@@ -42,14 +42,14 @@
         </footer>
       </dialog>
       <article id="mainContainer" class="card">
-        <header>
+        <header class="">
           <h2 id="formHeaderText">Start a new run</h2>
-          <button class="next" id="next" form="startNewRunForm">Next</button>
+          <button class="next right" id="next" form="startNewRunForm">Next</button>
         </header>
         <form class="row active" id="startNewRunForm">
           <div class="form-group">
             <label class="stack" for="runsFolder">
-              Please select the folder where the output for this run will be saved to
+              Select a folder to which the run output will be saved.
             </label>
             <div class="file">
               <div id="runsFolderButton" class="fileButton" onclick="getFolder(event)">Browse...</div>
@@ -59,7 +59,9 @@
             <div class="error" id="runsFolderError" role="alert">Please enter a valid runs folder</div>
           </div>
           <div class="form-group">
-            <legend>Is the lesion map already warped to DHCP template image?</legend>
+            <legend>
+              Is the input lesion mask already warped to a Developing Human Connectome Project (dHCP) template image?
+            </legend>
             <label for="yes">
               <input type="radio" value="yes" name="skipStep1" id="yes" required />
               <span class="checkable">YES</span>
@@ -78,7 +80,7 @@
           <h4>Image Data</h4>
           <div class="form-group">
             <label for="3DBrainImage" class="stack">
-              3D Brain Image in NIFTI Format
+              Subject brain image in NIFTI format (.nii or .nii.gz)
             </label>
             <div class="file">
               <div class="fileButton" onclick="getFile(event)">Browse...</div>
@@ -90,15 +92,14 @@
               <img id="3DBrainImageThumbnail" src=""
                 alt="Preview of the original brain image (T1 or T2) that the user uploaded as a 1x3 grid of images of the middle planes in the sagittal, coronal, and axial views" />
               <figcaption>
-                Preview of the original brain image as a 1x3 grid of images of the middle planes in the sagittal,
-                coronal, and axial views
+                Preview of subject brain image in sagittal, coronal, and axial planes
               </figcaption>
             </figure>
           </div>
 
           <div class="form-group">
             <label for="3DBrainLesionMask" class="stack">
-              3D Brain Lesion Mask in NIFTI Format
+              Subject brain lesion mask in NIFTI Format (.nii or .nii.gz)
             </label>
             <div class="file">
               <div class="fileButton" onclick="getFile(event)">Browse...</div>
@@ -110,7 +111,7 @@
           </div>
           <div class="third form-group">
             <label for="brainType" class="stack">
-              <span>Select type of brain image:</span>
+              <span>Type of brain image:</span>
               <select name="type" id="brainType" onchange="setInputData(event)" required>
                 <option hidden disabled selected value> -- select an option -- </option>
                 <option value="T1w">T1w</option>
@@ -132,7 +133,7 @@
           </div>
           <div class="form-group">
             <label for="gestationalAge" class="stack">
-              Subjects gestational age, in weeks:
+              Subject's gestational age at scan time, in weeks:
               <strong><span aria-label="required" class="required">*</span></strong>
             </label>
             <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAge"
@@ -146,7 +147,8 @@
           <h4>Image Data</h4>
           <div class="form-group">
             <label for="lesionImage" class="stack">
-              Lesion image already warped to template space
+              Subject lesion mask warped to a Developing Human Connectome Project (dHCP) template image, in NIFTI format
+              (.nii or .nii.gz)
             </label>
             <div class="file">
               <div class="fileButton" onclick="getFile(event)">Browse...</div>
@@ -170,7 +172,7 @@
           </div>
           <div class="form-group">
             <label for="gestationalAgeA" class="stack">
-              Age of template to which lesion image is warped, in weeks:
+              Age of dHCP template image to which lesion mask is warped, in weeks:
               <strong><span aria-label="required" class="required">*</span></strong>
             </label>
             <input type="number" step="0.01" placeholder="e.g. 37.67" name="gestation" id="gestationalAgeA"
@@ -182,21 +184,26 @@
         </form>
         <form id="generateDisconnectomeForm">
           <h2>Subject warped to age matched template <span class="label success">Success</span></h2>
+          <aside>
+            In the previous step, the subject’s brain image and lesion mask were aligned with an age-matched template.
+            Please
+            inspect the aligned image and lesion mask to ensure that alignment was successful before proceeding to the
+            next step. To
+            best assess alignment, inspect the images in an external 3D image viewer (e.g. FSLeyes).
+          </aside>
           <div id="previewResultImages" class="tabs three">
             <input id='tab-1' type='radio' name='tabgroupB' checked />
-            <label class="pseudo button toggle" for="tab-1">Aligned Image Pair</label>
+            <label class="pseudo button toggle" for="tab-1">Aligned image pair</label>
             <input id='tab-2' type='radio' name='tabgroupB'>
-            <label class="pseudo button toggle" for="tab-2">Lesion on Original Brain Image</label>
+            <label class="pseudo button toggle" for="tab-2">Lesion mask on original subject brain image</label>
             <input id='tab-3' type='radio' name='tabgroupB'>
-            <label class="pseudo button toggle" for="tab-3">Lesion on Age Matched Template</label>
+            <label class="pseudo button toggle" for="tab-3">Lesion maks on age-matched template</label>
             <div class="row">
               <figure>
                 <img class="previewImage" id="plotAlignedImagePair" src=""
                   alt="age-matched template image and the warped brain image beside each other to ensure they are aligned. This is to check the result of the first warp step" />
                 <figcaption>
-                  age-matched template image and the warped brain image beside each other to ensure they are aligned.
-                  This
-                  is to check the result of the first warp step
+                  Subject brain image (top) warped to age-matched template (bottom).
                 </figcaption>
               </figure>
 
@@ -204,7 +211,9 @@
                 <img class="previewImage" id="lesionOnOriginalTemplateClusters" src=""
                   alt="Preview the original label image overlaid on the original brain image" />
                 <figcaption>
-                  Preview the original label image overlaid on the original brain image.
+                  Lesion mask (cyan) overlaid on original subject brain image. Each row shows the image centered on each
+                  distinct lesion
+                  cluster.
                 </figcaption>
               </figure>
 
@@ -212,7 +221,9 @@
                 <img class="previewImage" id="lesionOnAgeMatchedTemplateClusters" src=""
                   alt="Preview the warped label image overlaid on the age-matched template image" />
                 <figcaption>
-                  Preview the warped label image overlaid on the age-matched template image.
+                  Warped lesion mask (cyan) overlaid on age-matched template. Each row shows the image centered on each
+                  distinct lesion
+                  cluster.
                 </figcaption>
               </figure>
             </div>
@@ -224,10 +235,16 @@
             <img id="plotDisconnectomeAtLesionCentroids" src=""
               alt="Image showing Disconnectome map overlaid on the 40w template, and the lesion map warped to the 40w template" />
             <figcaption>
-              Disconnectome map overlaid on the 40w template, and the lesion map warped to the 40w template
+              Lesion mask (cyan) and corresponding disconnectome map (red-yellow) overlaid on 40-week template. Each row
+              shows the
+              image centered on each distinct lesion cluster.
             </figcaption>
           </figure>
         </div>
+        <pre tabindex="0" style="background-color: #272822; margin: 0 5rem 2rem 5rem">
+          <span>To open these images in FSLeyes, run the command:</span>
+          <code id="copyCommand"></code>
+        </pre>
       </article>
       <aside class="container card output">
         <header>

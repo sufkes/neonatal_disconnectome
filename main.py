@@ -34,7 +34,6 @@ def getFolder():
   root = Tk()
   root.withdraw()
   root.wm_attributes('-topmost', 1)
-  root.iconify()  # minimizes/hides root window
   folder = fdialog.askdirectory()
   if folder:
     saved_folder = folder
@@ -50,7 +49,6 @@ def getFile(generateThumbnail = False, filename = 'brain_image_thumbnail.png'):
   root = Tk()
   root.withdraw()
   root.wm_attributes('-topmost', 1)
-  root.iconify()  # minimizes/hides root window
   file = None
   file = fdialog.askopenfile(mode='r')
   root.destroy()

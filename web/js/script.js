@@ -223,7 +223,7 @@ async function startRun() {
       currentForm = "form1a"
       inputs = form1a.querySelectorAll('input, select');
     } else {
-      formHeaderText.innerText = "Warp Subject Image and Lesion Mask To Age Matched Template";
+      formHeaderText.innerText = "Warp subject brain image and lesion mask to age-matched template";
       skipStepOne = false
       showForm(warpSubjectToAgeMatchedForm)
       currentForm = "warpSubjectToAgeMatchedForm"
@@ -239,7 +239,7 @@ async function nextOne() {
   const inputsValid = validateInputs(warpSubjectToAgeMatchedForm);
   if(inputsValid) {
     // set loading state and disable inputs
-    showLoading("Warping Subject To Age Matched Template");
+    showLoading("Warping subject brain image and lesion mask to age-matched template");
     disableInputs(warpSubjectToAgeMatchedForm)
 
     // get inputs and pass to python function
@@ -275,6 +275,8 @@ async function nextOne() {
       setOutputData("brainImageWarpedOutput", age, runsDir, subject)
       setOutputData("lesionImageWarpedOutput", age, runsDir, subject)
       setOutputData("ageMatchedTemplateOutput",age, runsDir, subject, type)
+
+      setCopyCommand(age, runsDir, subject, type)
 
       // remove loading state and re-enable inputs
       enableInputs(warpSubjectToAgeMatchedForm);
@@ -399,6 +401,28 @@ const btnsEvents = () => {
 };
 document.addEventListener("DOMContentLoaded", btnsEvents);
 
+function setCopyCommand(age, runsDir, subject, type = "T1w") {
+  let copyDataElement;
+  let pathToAgeMatchedDHCPTemplate;
+  let pathToWarpedSubjectBrainImage;
+  let roundedAge = Math.round(age)
+  if (roundedAge < 28) {
+    roundedAge = 28
+  }
+  if (roundedAge > 44) {
+    roundedAge = 44
+  }
+  const templateSpacePrefix = runsDir + "/" + subject + "/template_space/" + roundedAge + "W/"
+  const templateSpaceSuffix = roundedAge + "-week-template-space-warped.nii.gz"
+
+  copyDataElement = document.getElementById("copyCommand")
+  pathToWarpedSubjectBrainImage = templateSpacePrefix + "brain_img_" + templateSpaceSuffix
+
+  pathToAgeMatchedDHCPTemplate = + "/template/templates/week" + roundedAge + "_" + type + ".nii.gz"
+
+  copyDataElement.innerText = "fsleyes " + pathToAgeMatchedDHCPTemplate + " " + pathToWarpedSubjectBrainImage
+}
+
 function setOutputData(id, age, runsDir, subject, type = "T1w") {
   let outputDataElement;
   let val;
@@ -499,4 +523,35 @@ function showError() {
     An error occured and the operation failed
   `
   document.getElementById("circlePercentLoader").classList.add("hide")
+}
+
+let blocks = document.querySelectorAll("pre:has(code)");
+let copyButtonLabel = "Copy Code";
+
+console.log(blocks)
+
+blocks.forEach((block) => {
+  // Add a copy button to all blocks.
+  let button = document.createElement("button");
+  button.innerText = copyButtonLabel;
+  block.prepend(button);
+
+  // handle click event
+  button.addEventListener("click", async () => {
+    await copyCode(block, button);
+  });
+});
+
+async function copyCode(block, button) {
+  let code = block.querySelector("code");
+  let text = code.innerText;
+
+  await navigator.clipboard.writeText(text);
+
+  // visual feedback that task is completed
+  button.innerText = "Code Copied";
+
+  setTimeout(() => {
+    button.innerText = copyButtonLabel;
+  }, 700);
 }
