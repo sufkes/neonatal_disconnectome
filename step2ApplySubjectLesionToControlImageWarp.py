@@ -65,6 +65,13 @@ def applySubjectLesionToControlImageWarp(runs_dir, subject, lesion_image, age, s
 
       lesion_in_control_image_space = ants.apply_transforms(fixed=fixed_ants_img, moving=lesion_ants_img, transformlist=transformlist, verbose=True)
 
+      # TODO
+      # account for volume difference
+      # change lesion volume before saving
+      # get age and run nibable script
+      # call function in utils.py
+      # overwrite lesion_in_control_image_space based on return result of function
+
       # (3) Save the lesion mask in control image space:
       out_image_prefix = os.path.join(runs_control_space_path, sub_name)
       out_image_path = os.path.join(out_image_prefix, 'lesion.nii.gz')

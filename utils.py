@@ -189,3 +189,6 @@ def copyImageFiles(runs_dir:str, subject:str):
     logger.debug("file name is:  %s", full_file_name)
     if os.path.isfile(full_file_name) and file_name != "logo.png":
       shutil.copy(full_file_name, thumbnail_dir)
+
+
+# TODO add function for volume adjustment
