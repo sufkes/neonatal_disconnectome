@@ -33,8 +33,11 @@ def getFolder():
   global saved_folder
   root = Tk()
   root.withdraw()
-  root.wm_attributes('-topmost', 1)
-  folder = fdialog.askdirectory()
+  # Make sure the root window is on top and focused
+  root.attributes('-topmost', True)
+  root.update()  # Update to apply the '-topmost' attribute
+
+  folder = fdialog.askdirectory(parent=root, title="Select a runs directory")
   if folder:
     saved_folder = folder
   return folder
@@ -48,9 +51,12 @@ def get_saved_folder():
 def getFile(generateThumbnail = False, filename = 'brain_image_thumbnail.png'):
   root = Tk()
   root.withdraw()
-  root.wm_attributes('-topmost', 1)
+  # Make sure the root window is on top and focused
+  root.attributes('-topmost', True)
+  root.update()  # Update to apply the '-topmost' attribute
+
   file = None
-  file = fdialog.askopenfile(mode='r')
+  file = fdialog.askopenfile(parent=root, title='Select a file', mode='r')
   root.destroy()
   filepath = ""
   if file:

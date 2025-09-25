@@ -535,33 +535,17 @@ function showError() {
   document.getElementById("circlePercentLoader").classList.add("hide")
 }
 
-let blocks = document.querySelectorAll("pre:has(code)");
-let copyButtonLabel = "Copy Code";
-
-console.log(blocks)
-
-blocks.forEach((block) => {
-  // Add a copy button to all blocks.
-  let button = document.createElement("button");
-  button.innerText = copyButtonLabel;
-  block.prepend(button);
-
-  // handle click event
-  button.addEventListener("click", async () => {
-    await copyCode(block, button);
+document.querySelectorAll('.copy-btn').forEach(button => {
+  button.addEventListener('click', () => {
+    const code = button.nextElementSibling.innerText;
+    navigator.clipboard.writeText(code).then(() => {
+      const originalText = button.innerText;
+      button.innerText = 'Copied!';
+      setTimeout(() => {
+        button.innerText = originalText;
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+    });
   });
 });
-
-async function copyCode(block, button) {
-  let code = block.querySelector("code");
-  let text = code.innerText;
-
-  await navigator.clipboard.writeText(text);
-
-  // visual feedback that task is completed
-  button.innerText = "Code Copied";
-
-  setTimeout(() => {
-    button.innerText = copyButtonLabel;
-  }, 700);
-}
