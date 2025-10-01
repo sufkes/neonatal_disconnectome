@@ -28,18 +28,25 @@ eel.init(str(Path(__file__).parent / "web"),
 
 saved_folder = ""  # global variable to store folder path
 
+root = Tk()
+root.withdraw()
+
 @eel.expose
 def getFolder():
   global saved_folder
-  root = Tk()
-  root.withdraw()
-  # Make sure the root window is on top and focused
-  root.attributes('-topmost', True)
-  root.update()  # Update to apply the '-topmost' attribute
 
-  folder = fdialog.askdirectory(parent=root, title="Select a runs directory")
-  if folder:
-    saved_folder = folder
+  try:
+    # Make sure the root window is on top and focused
+    root.attributes('-topmost', True)
+    root.update()  # Update to apply the '-topmost' attribute
+    root.update_idletasks()  # Process all idle tasks
+    root.lift()              # Bring root window to front
+    folder = fdialog.askdirectory(parent=root, title="Select a runs directory")
+  finally:
+    root.withdraw()    # stop event loop if running
+    root.update()  # process any leftover events
+    if folder:
+      saved_folder = folder
   return folder
 
 
@@ -49,21 +56,26 @@ def get_saved_folder():
 
 @eel.expose
 def getFile(generateThumbnail = False, filename = 'brain_image_thumbnail.png'):
-  root = Tk()
-  root.withdraw()
+  #root = Tk()
+  #root.withdraw()
   # Make sure the root window is on top and focused
-  root.attributes('-topmost', True)
-  root.update()  # Update to apply the '-topmost' attribute
-
-  file = None
-  file = fdialog.askopenfile(parent=root, title='Select a file', mode='r')
-  root.destroy()
-  filepath = ""
-  if file:
-    filepath = os.path.abspath(file.name)
-    if(generateThumbnail):
-      # Generate Thumbnail image to preview original brain image
-      plotThreeView(filepath, os.path.join(WEB_IMG_DIR,filename))
+  try:
+    root.deiconify()
+    root.attributes('-topmost', True)
+    root.update()  # Update to apply the '-topmost' attribute
+    root.update_idletasks()  # Process all idle tasks
+    root.lift()              # Bring root window to front
+    file = None
+    file = fdialog.askopenfile(parent=root, title='Select a file', mode='r')
+  finally:
+    root.withdraw()    # stop event loop if running
+    root.update()  # process any leftover events
+    filepath = ""
+    if file:
+      filepath = os.path.abspath(file.name)
+      if(generateThumbnail):
+        # Generate Thumbnail image to preview original brain image
+        plotThreeView(filepath, os.path.join(WEB_IMG_DIR,filename))
   return filepath
 
 
