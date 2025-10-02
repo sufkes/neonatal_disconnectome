@@ -36,6 +36,7 @@ def getFolder():
   global saved_folder
 
   try:
+    root.deiconify()
     # Make sure the root window is on top and focused
     root.attributes('-topmost', True)
     root.update()  # Update to apply the '-topmost' attribute
@@ -137,6 +138,6 @@ def step2(runs_dir, subject, lesion_image, age, filenameHash, threshold = 0, ima
     return TEMPLATE_DIR
 
 if sys.platform in ['win32', 'win64'] and int(platform.release()) >= 10:
-  eel.start('main.html', port=0, host="0.0.0.0", mode="edge")    # Start
+  eel.start('main.html', port=0, host="localhost", mode="edge")    # Start
 else:
-  eel.start('main.html', port=0, host="0.0.0.0", mode="chrome-app")
+  eel.start('main.html', port=0, host="localhost", mode="chrome-app")

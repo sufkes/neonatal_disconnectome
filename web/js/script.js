@@ -136,7 +136,7 @@ function validateInput(input) {
         isValid = false
       }
     } else if (input.id === "subjectID" || input.id === "subjectIDA") {
-      const subjectIDRegex = /^[a-zA-Z0-9]+$/;
+      const subjectIDRegex = /^[a-zA-Z0-9_-]+$/;
       isValid = subjectIDRegex.test(input.value);
     } else if(input.type === "radio") {
       const radioButtons = document.querySelectorAll(`input[name="${input.name}"]`);

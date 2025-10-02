@@ -128,8 +128,8 @@
             </label>
             <input type="text" name="subject" id="subjectID" placeholder="e.g. CC00034XX09"
               onchange="setInputData(event)" pattern="[a-zA-Z0-9]+" required />
-            <div class="error" id="subjectIDError" role="alert">Please enter a valid subject id. Only letters and
-              numbers allowed. No special characters and no spaces</div>
+            <div class="error" id="subjectIDError" role="alert">Please enter a valid subject id. Only letters, numbers,
+              underscore and dashes allowed. No special characters and no spaces</div>
           </div>
           <div class="form-group">
             <label for="gestationalAge" class="stack">
@@ -166,8 +166,9 @@
             </label>
             <input type="text" name="subject" id="subjectIDA" placeholder="e.g. CC00034XX09"
               onchange="setInputData(event)" pattern="[a-zA-Z0-9]+" required />
-            <div class="error" id="subjectIDAError" role="alert">Please enter a valid subject id. Only letters and
-              numbers allowed. No special characters and no spaces</div>
+            <div class="error" id="subjectIDAError" role="alert">Please enter a valid subject id. Only letters, numbers,
+              underscore and dashes allowed. No special characters and no
+              spaces</div>
 
           </div>
           <div class="form-group">
@@ -193,11 +194,11 @@
           </aside>
           <div id="previewResultImages" class="tabs three">
             <input id='tab-1' type='radio' name='tabgroupB' checked onclick="" />
-            <label class="pseudo button toggle" for="tab-1">Aligned image pair</label>
+            <label class=" button toggle" for="tab-1">Aligned image pair</label>
             <input id='tab-2' type='radio' name='tabgroupB' onclick="">
-            <label class="pseudo button toggle" for="tab-2">Lesion mask on original subject brain image</label>
+            <label class=" button toggle" for="tab-2">Lesion mask on original subject brain image</label>
             <input id='tab-3' type='radio' name='tabgroupB' onclick="">
-            <label class="pseudo button toggle" for="tab-3">Lesion maks on age-matched template</label>
+            <label class=" button toggle" for="tab-3">Lesion mask on age-matched template</label>
             <div class="row">
               <figure>
                 <img class="previewImage" id="plotAlignedImagePair" src=""
@@ -205,6 +206,7 @@
                 <figcaption>
                   Subject brain image (top) warped to age-matched template (bottom).
                 </figcaption>
+                <p>The following command can be used to open the image above in FSLeyes:</p>
                 <pre>
                   <button class="copy-btn" type="button">Copy</button>
                   <code id="copyCommand1">
@@ -220,6 +222,7 @@
                   distinct lesion
                   cluster.
                 </figcaption>
+                <p>The following command can be used to open the image above in FSLeyes:</p>
                 <pre>
                   <button class="copy-btn" type="button">Copy</button>
                   <code id="copyCommand2">
@@ -235,6 +238,7 @@
                   distinct lesion
                   cluster.
                 </figcaption>
+                <p>The following command can be used to open the image above in FSLeyes:</p>
                 <pre>
                   <button class="copy-btn" type="button">Copy</button>
                   <code id="copyCommand3">
@@ -255,6 +259,7 @@
               image centered on each distinct lesion cluster.
             </figcaption>
           </figure>
+          <p>The following command can be used to open the image above in FSLeyes:</p>
           <pre>
             <button class="copy-btn" type="button">Copy</button>
             <code id="copyCommand">
