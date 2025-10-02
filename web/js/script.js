@@ -286,7 +286,7 @@ async function nextOne() {
       setOutputData("lesionImageWarpedOutput", age, runsDir, subject)
       setOutputData("ageMatchedTemplateOutput",age, runsDir, subject, type)
 
-      setCopyCommand(age, runsDir, subject, type)
+      setCopyCommand(age, runsDir, subject, type, result)
 
       // remove loading state and re-enable inputs
       enableInputs(warpSubjectToAgeMatchedForm);
@@ -332,6 +332,9 @@ async function nextOneA() {
 
       setOutputData("disconnectomeOutput", age, runsDir, subject)
       setOutputData("lesionImageIn40wOutput", age, runsDir, subject)
+
+      setDisconnectomeCopyCommand(runsDir, subject, type, result)
+
       // remove loading state and re-enable inputs
       enableInputs(form1a);
       stopLoading();
@@ -368,6 +371,8 @@ async function generateDisconnectome() {
     setOutputData("disconnectomeOutput", age, runsDir, subject)
     setOutputData("lesionImageIn40wOutput", age, runsDir, subject)
     setOutputData("40wTemplateImageOutput",age, runsDir, subject, type)
+
+    setDisconnectomeCopyCommand(runsDir, subject, type, result)
 
     // remove loading state and re-enable inputs
     stopLoading();
@@ -411,10 +416,11 @@ const btnsEvents = () => {
 };
 document.addEventListener("DOMContentLoaded", btnsEvents);
 
-function setCopyCommand(age, runsDir, subject, type = "T1w") {
+function setCopyCommand(age, runsDir, subject, type = "T1w", templateDir) {
   let copyDataElement;
   let pathToAgeMatchedDHCPTemplate;
   let pathToWarpedSubjectBrainImage;
+  let pathToLegionMaskInAgeMatchedTemplateSpace
   let roundedAge = Math.round(age)
   if (roundedAge < 28) {
     roundedAge = 28
@@ -425,12 +431,31 @@ function setCopyCommand(age, runsDir, subject, type = "T1w") {
   const templateSpacePrefix = runsDir + "/" + subject + "/template_space/" + roundedAge + "W/"
   const templateSpaceSuffix = roundedAge + "-week-template-space-warped.nii.gz"
 
-  copyDataElement = document.getElementById("copyCommand")
+  copyDataElement = document.getElementById("copyCommand1")
   pathToWarpedSubjectBrainImage = templateSpacePrefix + "brain_img_" + templateSpaceSuffix
+  pathToAgeMatchedDHCPTemplate = templateDir + "/templates/week" + roundedAge + "_" + type + ".nii.gz"
+  copyDataElement.innerText = "\nfsleyes " + pathToAgeMatchedDHCPTemplate + " " + pathToWarpedSubjectBrainImage
 
-  pathToAgeMatchedDHCPTemplate = + "/template/templates/week" + roundedAge + "_" + type + ".nii.gz"
+  copyDataElement = document.getElementById("copyCommand2")
+  copyDataElement.innerText = "\nfsleyes " + brainImage + " " + brainLesionMask + " -cm blue-lightblue"
 
-  copyDataElement.innerText = "fsleyes " + pathToAgeMatchedDHCPTemplate + " " + pathToWarpedSubjectBrainImage
+  copyDataElement = document.getElementById("copyCommand3")
+  pathToLegionMaskInAgeMatchedTemplateSpace = templateSpacePrefix + "lesion_mask_" + templateSpaceSuffix
+  copyDataElement.innerText = "\nfsleyes " + pathToAgeMatchedDHCPTemplate + " " + pathToLegionMaskInAgeMatchedTemplateSpace + " -cm blue-lightblue"
+}
+
+function setDisconnectomeCopyCommand(runsDir, subject, type = "T1w", templateDir) {
+  const copyDataElement = document.getElementById("copyCommand");
+  let pathTo40WeekTemplateImage;
+  let pathToDisconnectomeMap;
+  let pathToLegionMaskIn40WeekTemplateSpace
+
+  pathTo40WeekTemplateImage = templateDir + "/templates/week40" + "_" + type + ".nii.gz"
+  pathToDisconnectomeMap = runsDir + "/" + subject + "/disconnectome/disconnectome-threshold_0.nii.gz"
+  pathToLegionMaskIn40WeekTemplateSpace = runsDir + "/" + subject + "/disconnectome/lesion_mask_40-week-template-space-warped.nii.gz"
+
+  copyDataElement.innerText = "\nfsleyes " + pathTo40WeekTemplateImage + " " + pathToDisconnectomeMap + " -cm red-yellow " + pathToLegionMaskIn40WeekTemplateSpace + " -cm blue-lightblue"
+
 }
 
 function setOutputData(id, age, runsDir, subject, type = "T1w") {

@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import platform
 import sys
-from constants import WEB_IMG_DIR
+from constants import WEB_IMG_DIR, TEMPLATE_DIR
 import eel
 
 from tkinter import *
@@ -95,7 +95,7 @@ def step1(runs_dir, subject, image_type, moving_image, lesion_image, age, filena
     logger.exception("First step failed", e)
     return False
   else:
-    return True
+    return TEMPLATE_DIR
 
 @eel.expose
 def step1A(runs_dir, subject, lesion_image, age, filenameHash, image_type="T1w", threshold = 0):
@@ -120,7 +120,7 @@ def step1A(runs_dir, subject, lesion_image, age, filenameHash, image_type="T1w",
     logger.exception("generate disconnectome failed", e)
     return False
   else:
-    return True
+    return TEMPLATE_DIR
 
 @eel.expose
 def step2(runs_dir, subject, lesion_image, age, filenameHash, threshold = 0, image_type="T1w"):
@@ -134,7 +134,7 @@ def step2(runs_dir, subject, lesion_image, age, filenameHash, threshold = 0, ima
     logger.exception("generate disconnectome failed", e)
     return False
   else:
-    return True
+    return TEMPLATE_DIR
 
 if sys.platform in ['win32', 'win64'] and int(platform.release()) >= 10:
   eel.start('main.html', port=0, host="0.0.0.0", mode="edge")    # Start
