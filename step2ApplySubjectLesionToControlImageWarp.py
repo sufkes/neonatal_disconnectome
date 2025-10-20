@@ -3,7 +3,7 @@ import os
 import ants
 
 from constants import CONTROL_SPACE, CONTROLS_DIR, TEMPLATE_SPACE, TEMPLATE_TEMPLATES_DIR, TEMPLATE_WARPS_DIR
-from utils import createDisconnectomeDirectory
+from utils import createDisconnectomeDirectory, thresholdWarpedLesion
 
 logger = logging.getLogger(__name__)
 
@@ -65,13 +65,13 @@ def applySubjectLesionToControlImageWarp(runs_dir, subject, lesion_image, age, s
 
       lesion_in_control_image_space = ants.apply_transforms(fixed=fixed_ants_img, moving=lesion_ants_img, transformlist=transformlist, verbose=True)
 
-      # TODO
-      # account for volume difference
-      # change lesion volume before saving
-      # get age and run nibable script
-      # call function in utils.py
-      # overwrite lesion_in_control_image_space based on return result of function
+      ## Steve update: When the lesion is warped from native to control space, the lesion gets "smeared out" by resampling/interpolation. The warped lesion in control space will typically have greater volume than the original lesion. To fix this, we threshold the warped lesion such that its volume is the same as the original lesion, but multiplied by some factor to account for the differences in brain volumes between the lesion and control subjects. Since we do not know the brain volumes of the lesion or control subjects, we estimate using a linear function of brain volume vs. gestational age.
+      control_age_path = os.path.join(CONTROLS_DIR,d,sub_dir_list[0],'scan_age.txt')
+      with open(control_age_path) as handle:
+        control_age = handle.read()
 
+      lesion_in_control_image_space = thresholdWarpedLesion(lesion_ants_img, lesion_in_control_image_space, age, control_age)
+        
       # (3) Save the lesion mask in control image space:
       out_image_prefix = os.path.join(runs_control_space_path, sub_name)
       out_image_path = os.path.join(out_image_prefix, 'lesion.nii.gz')
@@ -88,13 +88,14 @@ def applySubjectLesionToControlImageWarp(runs_dir, subject, lesion_image, age, s
       logger.info("ANTsImage Objects read successfully")
 
     lesion_warped_to_40_week = ants.apply_transforms(fixed=fixed_ants_img, moving=lesion_ants_img, transformlist=transformlist[1:],verbose=True)
-
+    lesion_warped_to_40_week = thresholdWarpedLesion(lesion_ants_img, lesion_warped_to_40_week, age, 40)
+    
     disconnectome_out_dir = createDisconnectomeDirectory(runs_dir, subject)
 
     out_lesion_path = os.path.join(disconnectome_out_dir, 'lesion_mask_40-week-template-space-warped.nii.gz')
     ants.image_write(lesion_warped_to_40_week, out_lesion_path)
   except Exception as e:
-     logger.exception("Apply subject lesion to control image warp step failed")
-     raise e
+    logger.exception("Apply subject lesion to control image warp step failed")
+    raise e
   else:
-     return True
+    return True

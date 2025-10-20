@@ -9,12 +9,14 @@ This file contains the following functions:
     * createDisconnectomeDirectory - creates the sub folder structure for the disconnectome subdirectory to store disconnectome and warped lesion mask
     * getRoundedAge - given a subjects age it rounds and makes sure is between 28 and 44
     * deleteImagefiles - deletes old image files from previous runs
+    * thresholdWarpedLesion - shrink or expand warped lesion such that its volume is appropriately scaled based on the age difference between the lesion subject and the target space image; and binarize the warped lesion.
 """
 from decimal import Decimal
 import logging
 import os
 from pathlib import Path
 import shutil
+import numpy as np
 
 from constants import CONTROL_SPACE, CONTROLS_DIR, DISCONNECTOME, TEMPLATE_SPACE, THUMBNAILS, WEB_IMG_DIR
 
@@ -190,5 +192,41 @@ def copyImageFiles(runs_dir:str, subject:str):
     if os.path.isfile(full_file_name) and file_name != "logo.png":
       shutil.copy(full_file_name, thumbnail_dir)
 
+def estimateBrainVolume(age):
+  volume_estimate = 24480.9 * float(age) - 491404.5 # linear function fit to volumes of dHCP template brain masks (ranging from 28-44 weeks)
+  volume_estimate = max(193462.50, volume_estimate) # force estimate to be >= volume of 28w dHCP template brain mask
+  volume_estimate = min(576915.25, volume_estimate) # force estimate to be <= volume of 44w dHCP template brain mask
+  return volume_estimate
 
-# TODO add function for volume adjustment
+def thresholdWarpedLesion(lesion_image, lesion_in_control_image_space, lesion_age, control_age):
+  # Estimate the volume of the lesion and control subjects' brains. 
+  lesion_brain_volume = estimateBrainVolume(lesion_age)
+  control_brain_volume = estimateBrainVolume(control_age)
+
+  scaling_factor = control_brain_volume / lesion_brain_volume # factor by which the lesion should be scaled going from the lesion -> control spaces, in order to account for changes in brain/lesion volume with age.
+
+  original_lesion_volume_per_voxel_mm3 = np.product(lesion_image.spacing)
+  original_lesion_volume_voxels = np.count_nonzero(lesion_image.numpy())
+  original_lesion_volume_mm3 = original_lesion_volume_voxels * original_lesion_volume_per_voxel_mm3
+
+  warped_lesion_target_volume_mm3 = original_lesion_volume_mm3 * scaling_factor
+  warped_lesion_volume_per_voxel_mm3 = np.product(lesion_in_control_image_space.spacing)
+  warped_lesion_target_volume_voxels = warped_lesion_target_volume_mm3 / warped_lesion_volume_per_voxel_mm3
+
+  warped_lesion_space_total_voxels = np.product(lesion_in_control_image_space.numpy().shape) # total number of voxels in the control image space (LxWxH). 
+  
+  target_ratio_positive_voxels = warped_lesion_target_volume_voxels / warped_lesion_space_total_voxels # what ratio of voxels in the output image will be positive
+  target_percentile = np.percentile(lesion_in_control_image_space.numpy(), (1 - target_ratio_positive_voxels)*100)
+  lesion_in_control_image_space_thresholded_array = lesion_in_control_image_space.numpy()
+  lesion_in_control_image_space_thresholded_array[lesion_in_control_image_space_thresholded_array < target_percentile] = 0
+  lesion_in_control_image_space_thresholded_array[lesion_in_control_image_space_thresholded_array > 0] = 1 # binarize, so the lesion voxels are valued 0 or 1. 
+
+  # Raise exception if warped lesion has zero volume.
+  if np.count_nonzero(lesion_in_control_image_space_thresholded_array) == 0:
+    msg = 'Warped lesion has zero volume'
+    logger.exception(msg)
+    raise Exception(msg)
+
+  lesion_in_control_image_space_thresholded = lesion_in_control_image_space.new_image_like(lesion_in_control_image_space_thresholded_array)
+
+  return lesion_in_control_image_space_thresholded
