@@ -13,12 +13,14 @@ This file contains the following functions:
 from decimal import Decimal
 import logging
 import os
+import platform
+import subprocess
 from pathlib import Path
 import shutil
 
 from constants import CONTROL_SPACE, CONTROLS_DIR, DISCONNECTOME, TEMPLATE_SPACE, THUMBNAILS, WEB_IMG_DIR
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('disconnectome')
 
 def createImageThumbnailDirectory(subject: str, runs_dir: str):
   """creates the sub folder structure for the image thumbnail subdirectory based on subject ID
@@ -67,7 +69,7 @@ def createControlSpaceDirectory(subject: str, runs_dir: str):
     except FileExistsError:
       logger.warning("folder already exists")
     else:
-      logger.info("Control space sub folders created")
+      logger.info(f"Control space sub folders created: {path}")
 
 def createTemplateSpaceDirectory(age, runs_dir, subject):
   """creates the sub folder structure for the template space subdirectory based on subject ID and subject age
@@ -190,5 +192,20 @@ def copyImageFiles(runs_dir:str, subject:str):
     if os.path.isfile(full_file_name) and file_name != "logo.png":
       shutil.copy(full_file_name, thumbnail_dir)
 
+def open_in_file_browser(path):
+  if not os.path.exists(path):
+      logger.info(f"Path does not exist: {path}")
+      return
+
+  system = platform.system()
+  try:
+      if system == "Windows":
+          subprocess.run(['explorer', '/select,', path])
+      elif system == "Darwin":  # macOS
+          subprocess.run(['open', '-R', path])
+      else:  # Linux
+          subprocess.run(['xdg-open', os.path.dirname(path)])
+  except Exception as e:
+      logger.error(f"Error opening path {path}: {e}")
 
 # TODO add function for volume adjustment

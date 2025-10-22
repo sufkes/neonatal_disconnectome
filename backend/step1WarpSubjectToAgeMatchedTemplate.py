@@ -2,15 +2,15 @@ import logging
 import os
 import ants
 
-from constants import TEMPLATE_TEMPLATES_DIR, WEB_IMG_DIR
+from constants import TEMPLATE_TEMPLATES_DIR, THUMBNAILS
 from makeThumbnails import plotAlignedImagePair, plotLabelClustersOnBackground
 from utils import copyImageFiles, createTemplateSpaceDirectory
 
+# Get the same logger used by the app's GUI logging setup
 logger = logging.getLogger(__name__)
 
 # Age between 28-44 discrete
-
-def warpSubjectToAgeMatchedTemplate(runs_dir, subject, image_type, moving_image, lesion_image, age, filenameHash):
+def warpSubjectToAgeMatchedTemplate(runs_dir, subject, image_type, moving_image, lesion_image, age):
   try:
     ## 1. Create the template space runs directory structure to store result
     out_dir = createTemplateSpaceDirectory(age, runs_dir, subject)
@@ -35,7 +35,7 @@ def warpSubjectToAgeMatchedTemplate(runs_dir, subject, image_type, moving_image,
       fixed_ants_img = ants.image_read(fixed_path)
       lesion_ants_img = ants.image_read(lesion_image)
     except ValueError as err:
-      logger.exception("Opening NIFTI files as ANTSImage objects failed")
+      logger.error("Opening NIFTI files as ANTSImage objects failed")
       raise err
     else:
       logger.info("ANTsImage Objects read successfully")
@@ -71,26 +71,25 @@ def warpSubjectToAgeMatchedTemplate(runs_dir, subject, image_type, moving_image,
     ants.image_write(warped_image, out_image_path)
     ants.image_write(warped_lesion, out_lesion_path)
 
-    if(filenameHash):
-      ## 8. Generate the thumbnails and save them
 
-      alignedImage = 'plot_aligned_image_pair_'+ filenameHash + '.png'
-      full_file_name = os.path.join(WEB_IMG_DIR, alignedImage)
-      plotAlignedImagePair(out_image_path, fixed_path, full_file_name)
+    ## 8. Generate the thumbnails and save them
 
-      clustersImage = 'lesion_on_age_matched_template_clusters_' + filenameHash + '.png'
-      full_file_name = os.path.join(WEB_IMG_DIR, clustersImage)
-      plotLabelClustersOnBackground(out_lesion_path, fixed_path, full_file_name)
+    thumbnail_dir = os.path.join(runs_dir, subject, THUMBNAILS)
 
-      clustersOriginalImage = 'lesion_on_original_' + filenameHash + '.png'
-      full_file_name = os.path.join(WEB_IMG_DIR, clustersOriginalImage)
-      plotLabelClustersOnBackground(lesion_image, moving_image, full_file_name)
+    alignedImage = 'plot_aligned_image_pair.png'
+    full_file_name = os.path.join(thumbnail_dir, alignedImage)
+    plotAlignedImagePair(out_image_path, fixed_path, full_file_name)
 
-      ## 9. Copy the generated thumbnails to the runs directory
-      copyImageFiles(runs_dir, subject)
+    clustersImage = 'lesion_on_age_matched_template_clusters.png'
+    full_file_name = os.path.join(thumbnail_dir, clustersImage)
+    plotLabelClustersOnBackground(out_lesion_path, fixed_path, full_file_name)
+
+    clustersOriginalImage = 'lesion_on_original.png'
+    full_file_name = os.path.join(thumbnail_dir, clustersOriginalImage)
+    plotLabelClustersOnBackground(lesion_image, moving_image, full_file_name)
 
   except Exception as e:
-    logger.exception("Warp subject to age matched template failed")
+    logger.error("Warp subject to age matched template failed")
     raise e
   else:
     return True

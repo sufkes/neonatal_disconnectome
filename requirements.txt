@@ -9,3 +9,5 @@ matplotlib
 scikit-image
 pyside6
 click
+customtkinter
+pillow

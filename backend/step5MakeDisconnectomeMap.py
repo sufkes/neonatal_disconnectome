@@ -6,7 +6,7 @@ import logging
 import os
 import nibabel as nib
 
-from constants import DISCONNECTOME, TEMPLATE_TEMPLATES_DIR, VISITATION_MAPS_40W, WEB_IMG_DIR
+from constants import DISCONNECTOME, TEMPLATE_TEMPLATES_DIR, VISITATION_MAPS_40W, WEB_IMG_DIR, THUMBNAILS
 from makeThumbnails import plotDisconnectomeAtLesionCentroids
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ def makeDisconnectomeMap(in_paths, out_path, threshold):
   else:
      return True
 
-def generateDisconnectome(runs_dir, subject, image_type, filenameHash, threshold = 0):
+def generateDisconnectome(runs_dir, subject, image_type, threshold = 0):
   try:
     runs_path = os.path.join(runs_dir, subject)
     runs_visitation_maps_40w_path = os.path.join(runs_path, VISITATION_MAPS_40W)
@@ -67,12 +67,14 @@ def generateDisconnectome(runs_dir, subject, image_type, filenameHash, threshold
     out_path = os.path.join(disconnectome_out_dir, 'disconnectome-threshold_' + str(threshold) + '.nii.gz')
     makeDisconnectomeMap(in_paths, out_path, 0)
 
-    if filenameHash:
-      fixed_path = os.path.join(TEMPLATE_TEMPLATES_DIR, 'week40_' + image_type + '.nii.gz')
-      out_lesion_path = os.path.join(disconnectome_out_dir, 'lesion_mask_40-week-template-space-warped.nii.gz')
-      disconnectomeImage = 'disconnectome_at_lesion_centroids_' + filenameHash + '.png'
-      full_file_name = os.path.join(WEB_IMG_DIR, disconnectomeImage)
-      plotDisconnectomeAtLesionCentroids(fixed_path, out_path, out_lesion_path, full_file_name)
+
+    thumbnail_dir = os.path.join(runs_dir, subject, THUMBNAILS)
+
+    fixed_path = os.path.join(TEMPLATE_TEMPLATES_DIR, 'week40_' + image_type + '.nii.gz')
+    out_lesion_path = os.path.join(disconnectome_out_dir, 'lesion_mask_40-week-template-space-warped.nii.gz')
+    disconnectomeImage = 'disconnectome_at_lesion_centroids_0.png'
+    full_file_name = os.path.join(thumbnail_dir, disconnectomeImage)
+    plotDisconnectomeAtLesionCentroids(fixed_path, out_path, out_lesion_path, full_file_name)
   except Exception as e:
     logger.exception("Generating disconnectome failed")
     raise e

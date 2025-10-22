@@ -32,16 +32,6 @@ let currentForm = "startNewRunForm"
 
 let runsFolder = ""
 
-// Commands for copy
-
-// fsleyes template/templates/weekAGE_T1w template_space/AgeW/brain img warped
-
-// fsleyes
-
-// fsleyes template/templates/weekAGE_T1w template_space/AgeW/lesion mask warped
-
-// fsleyes template/templates/week40_t1w disconnectome/disconnectome disconnectome
-
 //================= file Events ===================
 
 async function getFolder(event) {
@@ -542,7 +532,7 @@ function showLoading(modalText = "Computing Result") {
 
   document.getElementById("loadingModalContent").innerHTML = `
   ${modalText}
-  <p>This computation will take approximately 30s - 2min</p>
+  <p>This computation will take up to 5min approximately</p>
   `
   loadingModal.showModal();
 }

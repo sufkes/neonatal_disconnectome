@@ -36,12 +36,14 @@ def warpVisitationMap(runs_dir, subject, image_type="T1w"):
       controls_path = os.path.join(runs_control_space_path, sub_name)
       moving_path = os.path.join(controls_path, 'visitation.nii.gz')
 
+      logger.info(f"fixed_path: {fixed_path}")
+      logger.info(f"moving_path: {moving_path}")
       ## 4. Open the NIFTI files as ANTsImage objects.
       try:
         fixed_ants_img = ants.image_read(fixed_path)
         moving_ants_img = ants.image_read(moving_path)
       except ValueError as err:
-        logger.exception("Opening NIFTI files as ANTSImage objects failed")
+        logger.error("Opening NIFTI files as ANTSImage objects failed")
         raise err
       else:
         logger.info("ANTsImage Objects read successfully")

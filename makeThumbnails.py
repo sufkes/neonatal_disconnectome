@@ -1,6 +1,8 @@
 import nibabel as nib
 
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib.colors import ListedColormap
 
