@@ -43,4 +43,5 @@ template/*
 
 # ignore everything in img folder except the logo
 web/img/*
+thumbnails/*
 !web/img/logo.png
