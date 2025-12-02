@@ -291,7 +291,7 @@ class WarpForm(ctk.CTkFrame):
     def browse_brain_image(self):
         """Browse for brain image file"""
         path = filedialog.askopenfilename(
-            filetypes=[("NIFTI files", "*.nii"), ("NIFTI files", "*.nii.gz")]
+            # filetypes=[("NIFTI files", "*.nii"), ("NIFTI files", "*.nii.gz")]
         )
 
         if path:
@@ -317,7 +317,7 @@ class WarpForm(ctk.CTkFrame):
     def browse_lesion_mask(self):
         """Browse for lesion mask file"""
         path = filedialog.askopenfilename(
-            filetypes=[("NIFTI files", "*.nii"), ("NIFTI files", "*.nii.gz")]
+            # filetypes=[("NIFTI files", "*.nii"), ("NIFTI files", "*.nii.gz")]
         )
 
         if path:
