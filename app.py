@@ -3,27 +3,40 @@ import queue
 import os
 from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
 
+import tkinter as tk
+import tkinter.font as tkfont
+
 import customtkinter as ctk
 from customtkinter import CTkImage
 from PIL import Image
 
+from screens.ctk_hyperlink_manager import CTkHyperlinkManager
 from screens.disconnectome_form import DisconnectomeForm
 from screens.result_screen import FinalResult
 from screens.start_screen import StartRunForm
 from screens.warp_form import WarpForm
-from utils import get_theme_names_from_folder, load_settings, update_settings
+from screens.warped_lesion_form import WarpedLesionForm
+from lib.utils import (
+    get_theme_names_from_folder,
+    open_in_file_browser,
+)
+
+# Import new state management
+from lib.state_management import StateManager
 
 DARK_GREY = "#2F2F2F"
 THEME_OPTIONS = get_theme_names_from_folder()
-settings = load_settings()
 
-if settings:
-    ctk.set_appearance_mode(settings.get("appearance", "light"))
-    theme = settings.get("theme", THEME_OPTIONS[0])
-    ctk.set_default_color_theme(f"themes/{theme}.json")
+# Initialize state manager globally
+state_manager = StateManager()
+
+# Apply initial settings from state manager
+config = state_manager.get_config()
+ctk.set_appearance_mode(config.appearance)
+if config.theme in THEME_OPTIONS:
+    ctk.set_default_color_theme(f"themes/{config.theme}.json")
 else:
     ctk.set_default_color_theme(f"themes/{THEME_OPTIONS[0]}.json")
-    ctk.set_appearance_mode("light")
 
 
 class TkinterTextHandler(logging.Handler):
@@ -64,41 +77,204 @@ class DisconnectomeApp(ctk.CTk):
         self.geometry("1024x768")
         self.minsize(640, 480)
 
+        # Use global state manager
+        self.state_manager = state_manager
+
+        # Subscribe to state changes
+        self.state_manager.subscribe(self.on_state_changed)
+
         # Configure grid: 3 rows (header, main, footer)
-        self.grid_rowconfigure(1, weight=1)  # main expands
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(
-            2, weight=0
-        )  # footer row weight, or set to 1 if you want it to expand
+        self.grid_rowconfigure(0, weight=0)  # header fixed height
+        self.grid_rowconfigure(1, weight=1)  # main area expands
+        self.grid_rowconfigure(2, weight=0)  # footer fixed height
+        self.grid_columnconfigure(0, weight=1)  # single column for entire app
+
+        # Create main_container inside row 1
+        self.main_container = ctk.CTkFrame(self)
+        self.main_container.grid(row=1, column=0, sticky="nsew")
+        self.main_container.grid_rowconfigure(0, weight=1)
+        self.main_container.grid_columnconfigure(0, weight=4)  # main content expands
+        self.main_container.grid_columnconfigure(
+            1, weight=1, minsize=200
+        )  # side panel width
 
         self.create_header()
         self.create_footer()
+        self.create_side_panel()
 
         # --- Main scrollable content area ---
-        self.content_frame = ctk.CTkScrollableFrame(self, corner_radius=0)
-        self.content_frame.grid(row=1, column=0, sticky="nsew")
+        self.content_frame = ctk.CTkScrollableFrame(
+            self.main_container, corner_radius=0
+        )
+        self.content_frame.grid(row=0, column=0, sticky="nsew")
 
         # Logger setup
         self._init_logging()
 
         self.current_screen = None
         self.current_screen_class = None
-        self.current_screen_args = None
+
+        # DEPRECATED: Keep for backward compatibility during migration
         self.app_data = {}
 
         self.logger.info("DisconnectomeApp started")
         self.show_start_form()
 
+    def poll_processing_state(self):
+        processing = self.state_manager.get_processing()
+
+        # Always redraw from current state
+        self.on_state_changed("processing")
+
+        # Keep polling while a step is in progress
+        if processing.current_step in ("step1_running", "step2_running"):
+            self.after(200, self.poll_processing_state)  # every 200 ms
+
+    def on_state_changed(self, state_type: str):
+        """
+        Callback when state changes
+
+        Args:
+            state_type: "config" or "processing"
+        """
+        if state_type == "config":
+            self.logger.debug("Configuration state changed")
+            # Update UI elements based on config changes
+        elif state_type == "processing":
+            self.logger.debug("Processing state changed")
+            # Update side panel or other UI elements
+            self.update_side_panel()
+
+    def update_side_panel(self):
+        """Update side panel with current processing state"""
+        processing = self.state_manager.get_processing()
+        config = self.state_manager.get_config()
+
+        # Clear existing content
+        self.textbox.configure(state="normal")
+        self.textbox.delete("1.0", "end")
+
+        # Add input data section
+        self.textbox.insert("end", "Input Data\n", "header")
+        self.textbox.insert("end", "\n")
+
+        input_summary = processing.get_input_summary()
+        if input_summary:
+            for key, value in input_summary.items():
+                if value:
+                    self._add_side_panel_item(key, value)
+        else:
+            self.textbox.insert("end", "  No input data yet\n\n", "info")
+
+        # ===== PROGRESS SECTION =====
+        if processing.current_step:
+            self.textbox.insert("end", "\nProcessing Status\n", "header")
+            self.textbox.insert("end", "\n")
+
+            # Step 1 status
+            if processing.step1_completed:
+                self.textbox.insert("end", "✓ ", "success")
+                self.textbox.insert("end", "Step 1: Warp to Template - Complete\n\n")
+            elif processing.current_step == "step1_running":
+                self.textbox.insert("end", "⟳ ", "info")
+                self.textbox.insert(
+                    "end",
+                    f"Step 1: Warp to Template - Running - {processing.current_step_details}...\n",
+                )
+                if processing.step1_progress > 0:
+                    progress_pct = int(processing.step1_progress * 100)
+                    self.textbox.insert("end", f"  Progress: {progress_pct}%\n\n")
+            elif processing.lesion_already_warped:
+                self.textbox.insert("end", "⊘ ", "info")
+                self.textbox.insert("end", "Step 1: Skipped (pre-warped lesion)\n\n")
+            else:
+                self.textbox.insert("end", "○ ", "pending")
+                self.textbox.insert("end", "Step 1: Warp to Template - Pending\n\n")
+
+            # Step 2 status
+            if processing.step2_completed:
+                self.textbox.insert("end", "✓ ", "success")
+                self.textbox.insert(
+                    "end", "Step 2: Generate Disconnectome - Complete\n\n"
+                )
+            elif processing.current_step == "step2_running":
+                self.textbox.insert("end", "⟳ ", "info")
+                self.textbox.insert(
+                    "end",
+                    f"Step 2: Generate Disconnectome - Running - {processing.current_step_details}...\n",
+                )
+                if processing.step2_progress > 0:
+                    progress_pct = int(processing.step2_progress * 100)
+                    self.textbox.insert("end", f"  Progress: {progress_pct}%\n\n")
+            elif processing.step1_completed:
+                self.textbox.insert("end", "○ ", "pending")
+                self.textbox.insert("end", "Step 2: Generate Disconnectome - Ready\n\n")
+            else:
+                self.textbox.insert("end", "○ ", "pending")
+                self.textbox.insert(
+                    "end", "Step 2: Generate Disconnectome - Pending\n\n"
+                )
+
+        # ===== OUTPUT DATA SECTION =====
+        output_summary = processing.get_output_summary(config.runs_folder)
+        if output_summary:
+            self.textbox.insert("end", "\nOutput Data\n", "header")
+            self.textbox.insert("end", "\n")
+
+            for key, value in output_summary.items():
+                self._add_side_panel_path(key, value)
+        elif processing.step1_completed or processing.step2_completed:
+            # Show message if steps completed but no outputs found
+            self.textbox.insert("end", "\nOutput Data\n", "header")
+            self.textbox.insert("end", "\n")
+            self.textbox.insert(
+                "end", "  Processing complete but output files not found\n", "warning"
+            )
+
+        # Configure additional tags for status indicators
+        self.textbox.tag_config("success", foreground="green")
+        self.textbox.tag_config("info", foreground="blue")
+        self.textbox.tag_config("pending", foreground="gray")
+        self.textbox.tag_config("warning", foreground="orange")
+
+        self.textbox.configure(state="disabled")
+
+    def _add_side_panel_item(self, label: str, value: str):
+        """Add a text item to side panel"""
+        self.textbox.insert("end", f"{label}: ", "input")
+        self.textbox.insert("end", f"{value}\n\n")
+
+    def _add_side_panel_path(self, label: str, path: str):
+        """Add a clickable path to side panel"""
+        tag = self.hyperlink_manager.add(path)
+        self.textbox.insert("end", f"{label}:\n", "output")
+        self.textbox.insert("end", f"  {path}\n\n", tag)
+
+    def toggle_sidepanel(self):
+        if self.sidepanel.winfo_ismapped():
+            self.sidepanel.grid_remove()
+            self.main_container.grid_columnconfigure(1, minsize=0, weight=0)
+            self.main_container.grid_columnconfigure(0, weight=1)
+        else:
+            self.sidepanel.grid()
+            self.main_container.grid_columnconfigure(1, minsize=200, weight=1)
+            self.main_container.grid_columnconfigure(0, weight=4)
+
     def create_header(self):
-        # --- Header ---
-        # Destroy existing header if exists
+        """Create application header with logo and controls"""
         if hasattr(self, "header"):
             self.header.destroy()
+
         self.header = ctk.CTkFrame(self, height=60, corner_radius=0)
         self.header.grid(row=0, column=0, sticky="ew")
         self.header.grid_propagate(False)
 
-        # Logo (replace "logo_light.png" and "logo_dark.png" with your actual logo files)
+        self.toggle_sidepanel_btn = ctk.CTkButton(
+            self.header, text="☰", width=40, command=self.toggle_sidepanel
+        )
+        self.toggle_sidepanel_btn.pack(side="right", padx=10, pady=10)
+
+        # Logo
         light_img = Image.open("web/img/logo.png")
         dark_img = Image.open("web/img/logo.png")
         self.logo_image = CTkImage(
@@ -109,30 +285,30 @@ class DisconnectomeApp(ctk.CTk):
 
         # Appearance mode selector dropdown
         appearance_options = ["Light", "Dark", "System"]
-        current_mode = ctk.get_appearance_mode()
+        current_mode = self.state_manager.get_config().appearance
 
         self.appearance_menu = ctk.CTkOptionMenu(
             self.header, values=appearance_options, command=self.change_appearance_mode
         )
-        self.appearance_menu.set(current_mode.capitalize())
+        self.appearance_menu.set(current_mode)
         self.appearance_menu.pack(side="right", padx=15, pady=10)
 
-        # List your themes - can be names or paths
-
+        # Theme selector
         self.theme_selector = ctk.CTkOptionMenu(
             self.header, values=THEME_OPTIONS, command=self.change_theme, width=150
         )
-        if settings:
-            saved_theme = settings.get("theme", THEME_OPTIONS[0])
-            self.theme_selector.set(saved_theme)  # Default value
+        current_theme = self.state_manager.get_config().theme
+        if current_theme in THEME_OPTIONS:
+            self.theme_selector.set(current_theme)
         else:
-            self.theme_selector.set(THEME_OPTIONS[0])  # Default value
+            self.theme_selector.set(THEME_OPTIONS[0])
         self.theme_selector.pack(side="right", padx=10, pady=10)
 
     def create_footer(self):
+        """Create footer with logging console"""
         if hasattr(self, "footer"):
             self.footer.destroy()
-        # --- Footer with logging ---
+
         self.footer = ctk.CTkFrame(
             self, height=150, corner_radius=0, fg_color=(DARK_GREY, DARK_GREY)
         )
@@ -144,10 +320,9 @@ class DisconnectomeApp(ctk.CTk):
         self.log_textbox = ctk.CTkTextbox(self.footer, fg_color=(DARK_GREY, DARK_GREY))
         self.log_textbox.grid(row=0, column=0, sticky="nsew")
 
-        # Toggle button grid in column 1
         self.toggle_btn = ctk.CTkButton(
             self.footer,
-            text="▼",  # Start with arrow down meaning box is visible
+            text="▼",
             width=25,
             height=25,
             command=self.toggle_log_visibility,
@@ -155,17 +330,45 @@ class DisconnectomeApp(ctk.CTk):
         )
         self.toggle_btn.grid(row=0, column=1, sticky="ne", padx=5, pady=5)
 
+    def create_side_panel(self):
+        """Create side panel for displaying input/output information"""
+        self.sidepanel = ctk.CTkFrame(self.main_container)
+        self.sidepanel.grid(row=0, column=1, sticky="nsew")
+
+        self.textbox = tk.Text(self.sidepanel, wrap="word")
+        self.textbox.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+
+        header_font = tkfont.Font(family="Helvetica", size=16, weight="bold")
+        title_font = tkfont.Font(family="Helvetica", size=14, weight="bold")
+
+        self.textbox.tag_configure("header", font=header_font)
+        self.textbox.tag_configure("input", font=title_font, foreground="#1EB44D")
+        self.textbox.tag_configure("output", font=title_font, foreground="#1EB44D")
+
+        self.sidepanel.grid_rowconfigure(0, weight=1)
+        self.sidepanel.grid_columnconfigure(0, weight=1)
+        self.sidepanel.configure(width=200)
+
+        # Initialize hyperlink manager
+        self.hyperlink_manager = CTkHyperlinkManager(self.textbox, open_in_file_browser)
+
+        # Initial content
+        self.textbox.insert("end", "Input Data\n", "header")
+        self.textbox.insert("end", "\n")
+        self.textbox.configure(state="disabled")
+
     def toggle_log_visibility(self):
         if self.log_textbox.winfo_ismapped():
             self.log_textbox.grid_remove()
-            self.toggle_btn.configure(text="▲")  # Up arrow meaning box is hidden
-            self.footer.configure(height=35)  # Adjust footer height when hidden
+            self.toggle_btn.configure(text="▲")
+            self.footer.configure(height=35)
         else:
             self.log_textbox.grid()
-            self.toggle_btn.configure(text="▼")  # Down arrow when box visible
-            self.footer.configure(height=150)  # Restore footer height
+            self.toggle_btn.configure(text="▼")
+            self.footer.configure(height=150)
 
     def _init_logging(self):
+        """Initialize logging system"""
         self.log_queue = queue.Queue(maxsize=1000)
         self.logger = logging.getLogger("disconnectome")
         self.logger.setLevel(logging.DEBUG)
@@ -193,33 +396,31 @@ class DisconnectomeApp(ctk.CTk):
         self.queue_listener.start()
 
     def on_closing(self):
+        """Clean up resources before closing"""
         self.queue_listener.stop()
+        self.state_manager.unsubscribe(self.on_state_changed)
         self.destroy()
 
     def _show_screen(self, screen_class, *args):
+        """Navigate to a different screen"""
         self.current_screen_class = screen_class
-        self.current_screen_args = args
 
         if self.current_screen:
+            # Save current screen state (deprecated method)
             if hasattr(self.current_screen, "save_data"):
                 self.current_screen.save_data(self.app_data)
-            self.current_screen.grid_forget()  # Hide instead of destroying
+            self.current_screen.grid_forget()
 
-        if (
-            self.current_screen_class
-            and self.current_screen
-            and isinstance(self.current_screen, screen_class)
-        ):
-            # Reuse existing screen instance
-            self.current_screen.grid(row=0, column=0, sticky="nsew")
-            self.update()
-        else:
-            # Create new screen instance if needed
-            self.current_screen = screen_class(self.content_frame, *args, app=self)
-            if hasattr(self.current_screen, "load_data"):
-                self.current_screen.load_data(self.app_data)
-            self.current_screen.grid(row=0, column=0, sticky="nsew")
-            self.update()
+        # Always create new screen instance for now
+        # TODO: Implement screen caching/reuse if needed
+        self.current_screen = screen_class(self.content_frame, *args, app=self)
+
+        # Load screen state (deprecated method)
+        if hasattr(self.current_screen, "load_data"):
+            self.current_screen.load_data(self.app_data)
+
+        self.current_screen.grid(row=0, column=0, sticky="nsew")
+        self.update()
 
         self.content_frame.grid_rowconfigure(0, weight=1)
         self.content_frame.grid_columnconfigure(0, weight=1)
@@ -227,78 +428,75 @@ class DisconnectomeApp(ctk.CTk):
         self.logger.info(f"Navigated to {screen_class.__name__}")
 
     def refresh_styles(self):
+        """Refresh UI styles based on current theme"""
+        theme = ctk.ThemeManager.theme
+
+        self.configure(fg_color=theme["CTkFrame"]["fg_color"])
+
         # Update header
-        self.header.configure(fg_color=ctk.ThemeManager.theme["CTkFrame"]["fg_color"])
+        self.header.configure(fg_color=theme["CTkFrame"]["fg_color"])
         self.logo_label.configure(
             text_color=ctk.ThemeManager.theme["CTkLabel"]["text_color"]
         )
 
         self.appearance_menu.configure(
-            fg_color=ctk.ThemeManager.theme["CTkOptionMenu"]["fg_color"],
-            button_color=ctk.ThemeManager.theme["CTkOptionMenu"]["button_color"],
-            button_hover_color=ctk.ThemeManager.theme["CTkOptionMenu"][
-                "button_hover_color"
-            ],
-            text_color=ctk.ThemeManager.theme["CTkOptionMenu"]["text_color"],
+            fg_color=theme["CTkOptionMenu"]["fg_color"],
+            button_color=theme["CTkOptionMenu"]["button_color"],
+            button_hover_color=theme["CTkOptionMenu"]["button_hover_color"],
+            text_color=theme["CTkOptionMenu"]["text_color"],
         )
 
         self.theme_selector.configure(
-            fg_color=ctk.ThemeManager.theme["CTkOptionMenu"]["fg_color"],
-            button_color=ctk.ThemeManager.theme["CTkOptionMenu"]["button_color"],
-            button_hover_color=ctk.ThemeManager.theme["CTkOptionMenu"][
-                "button_hover_color"
-            ],
-            text_color=ctk.ThemeManager.theme["CTkOptionMenu"]["text_color"],
+            fg_color=theme["CTkOptionMenu"]["fg_color"],
+            button_color=theme["CTkOptionMenu"]["button_color"],
+            button_hover_color=theme["CTkOptionMenu"]["button_hover_color"],
+            text_color=theme["CTkOptionMenu"]["text_color"],
         )
 
         # Update footer
-        # Optional: keep footer gray regardless of theme
-        self.footer.configure(
-            fg_color=(DARK_GREY, DARK_GREY),
-        )
-
+        self.footer.configure(fg_color=(DARK_GREY, DARK_GREY))
         self.log_textbox.configure(
             fg_color=(DARK_GREY, DARK_GREY),
-            border_color=ctk.ThemeManager.theme["CTkTextbox"]["border_color"],
-            text_color=ctk.ThemeManager.theme["CTkTextbox"]["text_color"],
-            scrollbar_button_color=ctk.ThemeManager.theme["CTkTextbox"][
-                "scrollbar_button_color"
-            ],
-            scrollbar_button_hover_color=ctk.ThemeManager.theme["CTkTextbox"][
+            border_color=theme["CTkTextbox"]["border_color"],
+            text_color=theme["CTkTextbox"]["text_color"],
+            scrollbar_button_color=theme["CTkTextbox"]["scrollbar_button_color"],
+            scrollbar_button_hover_color=theme["CTkTextbox"][
                 "scrollbar_button_hover_color"
             ],
         )
 
-        self.logger.info(ctk.ThemeManager.theme["CTkScrollableFrame"])
-
         # Update main content frame
-
-        sf_theme = ctk.ThemeManager.theme["CTkScrollableFrame"]
+        self.main_container.configure(
+            fg_color=theme["CTkFrame"]["fg_color"],
+            border_color=theme["CTkFrame"]["border_color"],
+        )
+        sf_theme = theme["CTkScrollableFrame"]
         self.content_frame.configure(
             label_fg_color=sf_theme["label_fg_color"],
             fg_color=sf_theme["fg_color"],
             border_color=sf_theme["border_color"],
         )
 
-        # You can add calls to update current_screen widgets themes as well if needed
+        # Update current screen theme
         if self.current_screen and hasattr(self.current_screen, "update_theme"):
             self.current_screen.update_theme()
 
     def change_appearance_mode(self, new_mode):
+        """Change application appearance mode"""
         ctk.set_appearance_mode(new_mode.lower())
-        update_settings(appearance=new_mode)
+        self.state_manager.update_config(appearance=new_mode)
         self.logger.info(f"Appearance mode changed to {new_mode}")
         self.refresh_styles()
 
     def change_theme(self, selected_theme):
-        # Load the selected theme JSON file from the themes folder
+        """Change application theme"""
         theme_path = f"themes/{selected_theme}.json"
         if os.path.isfile(theme_path):
             ctk.set_default_color_theme(theme_path)
         else:
             ctk.set_default_color_theme(selected_theme)
 
-        update_settings(theme=selected_theme)
+        self.state_manager.update_config(theme=selected_theme)
         self.logger.info(f"Theme changed to {selected_theme}")
         self.refresh_styles()
 
@@ -307,6 +505,10 @@ class DisconnectomeApp(ctk.CTk):
 
     def show_warp_form(self):
         self._show_screen(WarpForm, self.show_start_form)
+
+    def show_warped_lesion_form(self):
+        """Show form for processing pre-warped lesion masks"""
+        self._show_screen(WarpedLesionForm, self.show_start_form)
 
     def show_disconnectome_form(self):
         self._show_screen(DisconnectomeForm, self.show_warp_form)

@@ -1,11 +1,12 @@
 import os
+from pathlib import Path
 import threading
 import customtkinter as ctk
 from tkinter import messagebox
 from PIL import Image
 
-from constants import THUMBNAILS_DIR, TEMPLATE_DIR, THUMBNAILS
-from utils import getRoundedAge, open_in_file_browser
+from lib.constants import TEMPLATE_DIR, THUMBNAILS
+from lib.utils import getRoundedAge, open_in_file_browser
 from .loading_overlay import LoadingOverlay
 
 from backend.logging_utils import run_step2_with_logging
@@ -16,6 +17,7 @@ class DisconnectomeForm(ctk.CTkFrame):
         super().__init__(master)
         self.go_back_callback = go_back_callback
         self.app = app  # store app reference
+        self.state_manager = app.state_manager if app else None
 
         # Configure grid layout for this frame
         self.grid_rowconfigure(2, weight=1)  # Tabview expands vertically
@@ -84,41 +86,63 @@ class DisconnectomeForm(ctk.CTkFrame):
         )
         self.next_button.grid(row=0, column=1, sticky="e")
 
-        # Load placeholder images (replace with actual images as needed)
         self.images = {}
-        self.load_placeholder_images()
 
-        # Create content in tabs
-        self.create_tab_content()
+        # Load existing state if available
+        self._load_from_state()
 
-    def load_placeholder_images(self):
-        runs_dir = self.app.app_data.get("runs_folder", "")
-        subject = self.app.app_data.get("subject_id", "")
+    def _load_from_state(self):
+        """Load values from state manager"""
+        if not self.state_manager:
+            return
+
+        processing = self.state_manager.get_processing()
+        config = self.state_manager.get_config()
+
+        # Load thumbnails
+        if processing.subject_id and config.runs_folder:
+            self._load_placeholder_images_if_exists()
+
+        # Load values into tabs
+        self._load_tab_content()
+
+    def _load_placeholder_images_if_exists(self):
+        config = self.state_manager.get_config()
+        processing = self.state_manager.get_processing()
+        runs_folder = config.runs_folder
+        subject = processing.subject_id
         # Creates simple gray placeholder images; replace by actual PIL.Image.open(filepath) for real images
         for key in [
             "plot_aligned_image_pair",
             "lesion_on_original",
             "lesion_on_age_matched_template_clusters",
         ]:
-            outpath = os.path.join(runs_dir, subject, THUMBNAILS, key + ".png")
-            thumbnail_pil = Image.open(outpath)
-            self.images[key] = ctk.CTkImage(
-                light_image=thumbnail_pil,
-                dark_image=thumbnail_pil,
-                size=thumbnail_pil.size,
-            )
+            outpath = os.path.join(runs_folder, subject, THUMBNAILS, key + ".png")
+            if os.path.exists(outpath):
+                try:
+                    thumbnail_pil = Image.open(outpath)
+                    self.images[key] = ctk.CTkImage(
+                        light_image=thumbnail_pil,
+                        dark_image=thumbnail_pil,
+                        size=thumbnail_pil.size,
+                    )
+                except Exception as e:
+                    if self.app:
+                        self.app.logger.error(f"Failed to load thumbnail: {e}")
 
-    def create_tab_content(self):
-        brain_image = self.app.app_data.get("brain_image_path", "")
-        lesion_mask = self.app.app_data.get("lesion_mask_path", "")
-        runs_dir = self.app.app_data.get("runs_folder", "")
-        subject = self.app.app_data.get("subject_id", "")
-        age = self.app.app_data.get("gest_age", "")
-        brain_type = self.app.app_data.get("brain_type", "")
+    def _load_tab_content(self):
+        processing = self.state_manager.get_processing()
+        config = self.state_manager.get_config()
+        brain_image = processing.brain_image_path
+        lesion_mask = processing.lesion_mask_path
+        runs_folder = config.runs_folder
+        subject = processing.subject_id
+        age = processing.gestational_age
+        brain_type = processing.brain_type
         roundedAge = getRoundedAge(age)
 
         templateSpacePrefix = os.path.join(
-            runs_dir, subject, "template_space", roundedAge + "W"
+            runs_folder, subject, "template_space", roundedAge + "W"
         )
         templateSpaceSuffix = f"{roundedAge}-week-template-space-warped.nii.gz"
 
@@ -127,6 +151,7 @@ class DisconnectomeForm(ctk.CTkFrame):
         pathToWarpedSubjectBrainImage = os.path.join(
             templateSpacePrefix, "brain_img_" + templateSpaceSuffix
         )
+
         pathToAgeMatchedDHCPTemplate = os.path.join(
             TEMPLATE_DIR, "templates", f"week{roundedAge}_{brain_type}.nii.gz"
         )
@@ -155,6 +180,7 @@ class DisconnectomeForm(ctk.CTkFrame):
         pathToLegionMaskInAgeMatchedTemplateSpace = os.path.join(
             templateSpacePrefix, "lesion_mask_" + templateSpaceSuffix
         )
+
         command = f"fsleyes {pathToAgeMatchedDHCPTemplate} {pathToLegionMaskInAgeMatchedTemplateSpace} -cm blue-lightblue"
         self.create_preview_section(
             tab3,
@@ -162,6 +188,30 @@ class DisconnectomeForm(ctk.CTkFrame):
             caption="Warped lesion mask (cyan) overlaid on age-matched template. Each row shows the image centered on each distinct lesion cluster.",
             copy_command=command,
         )
+
+        # add output text
+        # self.app.add_path(
+        #     "input brain image warped to age-matched template",
+        #     pathToWarpedSubjectBrainImage,
+        #     "output",
+        # )
+        # self.app.add_path(
+        #     "input lesion image warped to age-matched template",
+        #     pathToLegionMaskInAgeMatchedTemplateSpace,
+        #     "output",
+        # )
+
+        pathToAgeMatchedTemplateOutput = os.path.join(
+            runs_folder.split("/runs")[0],
+            "template",
+            "templates",
+            "week" + roundedAge + "_" + brain_type + ".nii.gz",
+        )
+        # self.app.add_path(
+        #     "age-matched template image(fixed image for warp step)",
+        #     pathToAgeMatchedTemplateOutput,
+        #     "output",
+        # )
 
     def create_preview_section(self, parent, image_key, caption, copy_command):
         # Configure parent's grid for layout
@@ -184,45 +234,65 @@ class DisconnectomeForm(ctk.CTkFrame):
         )
         instruction_label.grid(row=2, column=0, sticky="w")
 
-        command_frame = ctk.CTkFrame(parent)
-        command_frame.grid(row=3, column=0, padx=(10, 5), pady=5, sticky="w")
-        # Allow columns to expand so copying button stays right if needed
-        command_frame.grid_columnconfigure(0, weight=1)
+        command_container = ctk.CTkFrame(parent)
+        command_container.grid(row=3, column=0, padx=(10, 5), pady=5, sticky="ew")
+        command_container.grid_columnconfigure(0, weight=1)  # scrollable part expands
+        command_container.grid_rowconfigure(0, weight=0)
+
+        command_frame = ctk.CTkScrollableFrame(
+            command_container, orientation="horizontal", height=40
+        )
+        command_frame.grid(row=0, column=0, sticky="ew")
         command_frame.grid_rowconfigure(0, weight=1)
 
         # Split command like: "fsleyes path1 path2"
         parts = copy_command.split()
         base_command = parts[0]  # "fsleyes"
-        paths = parts[1:]  # ["path1", "path2", ...]
 
         # Label for the static 'fsleyes ' part
         base_label = ctk.CTkLabel(command_frame, text=base_command + " ")
         base_label.grid(row=0, column=0, sticky="w", padx=(10, 5), pady=5)
 
-        wrap_px = 350
         # Label for each path, clickable
-        for i, path in enumerate(paths):
-            clickable_label = ctk.CTkLabel(
-                command_frame,
-                text=path,
-                text_color="#0074d9",
-                cursor="hand2",
-                underline=True,
-                wraplength=wrap_px,
-                justify="left",
-            )
-            clickable_label.grid(row=0, column=i + 1, sticky="w", padx=(5, 0))
-            clickable_label.bind(
-                "<Button-1>", lambda e, p=path: open_in_file_browser(p)
-            )
+        for i, part in enumerate(parts[1:]):
+            if Path(part).exists():
+                clickable_label = ctk.CTkLabel(
+                    command_frame,
+                    text=part,
+                    text_color="#0074d9",
+                    cursor="hand2",
+                    underline=True,
+                    wraplength=0,
+                    justify="left",
+                )
+                clickable_label.grid(
+                    row=0, column=i + 1, sticky="w", padx=(5, 0), pady=5
+                )
+                clickable_label.bind(
+                    "<Button-1>", lambda e, p=part: open_in_file_browser(p)
+                )
+            else:
+                # Non-clickable text
+                normal_label = ctk.CTkLabel(
+                    command_frame,
+                    text=part,
+                    wraplength=0,
+                    justify="left",
+                    text_color="black",
+                )
+                normal_label.grid(row=0, column=i + 1, sticky="w", padx=(5, 0), pady=5)
 
+        # Fixed frame for copy button
+        copy_button_frame = ctk.CTkFrame(command_container, width=80)
+        copy_button_frame.grid(row=0, column=1, sticky="ns")
+        copy_button_frame.grid_propagate(False)  # prevent resizing
         copy_button = ctk.CTkButton(
-            command_frame,
+            copy_button_frame,
             text="Copy",
             width=60,
             command=lambda: self.copy_to_clipboard(copy_command),
         )
-        copy_button.grid(row=0, column=len(paths) + 1, padx=10, sticky="e")
+        copy_button.grid(row=0, column=0, padx=10, pady=5)
 
     def copy_to_clipboard(self, text):
         try:
@@ -254,23 +324,32 @@ class DisconnectomeForm(ctk.CTkFrame):
 
             self.loading_overlay.show()
 
-            # Retrieve values
-            runs_dir = self.app.app_data.get("runs_folder", "")
-            subject = self.app.app_data.get("subject_id", "")
-            image_type = self.app.app_data.get("brain_type", "")
-            lesion_image = self.app.app_data.get("lesion_mask_path", "")
-            age = self.app.app_data.get("gest_age", "")
+            # Get values from state manager
+            processing = self.state_manager.get_processing()
+            config = self.state_manager.get_config()
 
-            self.app.logger.info(
-                f"runs_dir: {runs_dir}\nsubject: {subject}\nimage_type: {image_type}\nlesion_image: {lesion_image}\nage: {age}"
-            )
+            runs_dir = config.runs_folder
+            subject = processing.subject_id
+            image_type = processing.brain_type
+            lesion_image = processing.lesion_mask_path
+            age = processing.gestational_age
+
+            if self.app:
+                self.app.logger.info(
+                    f"Starting Step 2:\n"
+                    f"  runs_dir: {runs_dir}\n"
+                    f"  subject: {subject}\n"
+                    f"  image_type: {image_type}\n"
+                    f"  lesion_image: {lesion_image}\n"
+                    f"  age: {age}"
+                )
 
             # Run step2 in a background thread
             def run_step2():
                 try:
-                    from backend.logic import step2
+                    from backend.logic import step2_from_state
 
-                    success = step2(runs_dir, subject, lesion_image, age, 0, image_type)
+                    success = step2_from_state(processing, config)
                     # Schedule UI update on main thread:
                     self.after(0, lambda: self.on_step2_complete(success))
                 except Exception as e:
@@ -281,6 +360,8 @@ class DisconnectomeForm(ctk.CTkFrame):
                     self.after(0, lambda: self.on_step2_complete(False))
 
             threading.Thread(target=run_step2, daemon=True).start()
+            # start polling for state changes
+            self.app.poll_processing_state()
 
     def on_step2_complete(self, success):
         # Hide loading overlay and re-enable button
@@ -289,6 +370,9 @@ class DisconnectomeForm(ctk.CTkFrame):
         self.back_button.configure(state="normal")
 
         if success:
+            # Update state to mark step1 as completed
+            if self.state_manager:
+                self.state_manager.update_processing(step2_completed=True)
             # Navigate to next screen
             if self.app:
                 self.app.show_final_result()

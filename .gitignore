@@ -36,10 +36,11 @@ MANIFEST
 *.log.*
 
 # Data files
-controls/*
+data/*
 example_input_data/*
 runs/*
-template/*
+
+user_settings.json
 
 # ignore everything in img folder except the logo
 web/img/*

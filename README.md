@@ -1,7 +1,6 @@
 # Libraries used
 
-1. Eel
-2. [Picnic css](https://picnicss.com/)
+1. [CustomTkinter](https://customtkinter.tomschimansky.com/)
 
 # Setup instructions
 
@@ -12,10 +11,9 @@
 3. run `docker compose up -d` in same directory as docker compose file
 4. Get the running container id using `docker ps`
 5. exec into the docker container using command `docker exec --it CONTAINER_ID bash`
-6. run the command inside the container to start the application `python main.py`
-7. open in a browser the following url [localhost:8000/templates/main.html](localhost:8000/templates/main.html)
-8. to gracefully shutdown the container in a new terminal run `docker compose down --rmi all`
-9. since docker takes up a lot of space run `docker system prune -a` to remove unused docker images
+6. run the command inside the container to start the application `python app.py`
+7. to gracefully shutdown the container in a new terminal run `docker compose down --rmi all`
+8. since docker takes up a lot of space run `docker system prune -a` to remove unused docker images
 
 ## Troubleshooting
 

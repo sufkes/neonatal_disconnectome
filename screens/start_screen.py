@@ -1,8 +1,7 @@
 import os
-from tkinter import filedialog, messagebox
+from tkinter import filedialog
 
 import customtkinter as ctk
-from utils import load_settings, update_settings
 
 
 class StartRunForm(ctk.CTkFrame):
@@ -10,6 +9,7 @@ class StartRunForm(ctk.CTkFrame):
         super().__init__(master)
         self.next_callback = next_callback
         self.app = app  # store app reference
+        self.state_manager = app.state_manager if app else None
 
         # Main layout configuration
         self.grid_columnconfigure(0, weight=1)  # Make the main layout responsive
@@ -118,22 +118,21 @@ class StartRunForm(ctk.CTkFrame):
         )
 
     def set_runs_folder(self):
-        settings = load_settings()
-        print(settings)
-        if settings:
-            runs_folder_path = settings.get("runs_folder", "")
-        print(runs_folder_path)
-        print(os.path.isdir(runs_folder_path))
-        if os.path.isdir(runs_folder_path):
-            # Set runs_folder_var in your UI to runs_folder_path to pre-fill
-            self.runs_folder_var.set(runs_folder_path)
+        if self.state_manager:
+            config = self.state_manager.get_config()
+            runs_dir = config.runs_folder
+            if os.path.isdir(runs_dir):
+                # Set runs_folder_var in your UI to runs_folder_path to pre-fill
+                self.runs_folder_var.set(runs_dir)
 
     def browse_folder(self):
         folder_selected = filedialog.askdirectory()
         if folder_selected:
             self.runs_folder_var.set(folder_selected)
-            update_settings(runs_folder=folder_selected)
             self.runs_folder_error.set("")  # clear runs folder error on selection
+            # Update state manager
+            if self.state_manager:
+                self.state_manager.update_config(runs_folder=folder_selected)
 
     def clear_lesion_error(self):
         self.lesion_error.set("")  # clear lesion radio error on selection change
@@ -166,24 +165,22 @@ class StartRunForm(ctk.CTkFrame):
         if has_error:
             return
 
+        # Update state manager
+        if self.state_manager:
+            self.state_manager.update_processing(
+                lesion_already_warped=(lesion == "yes")
+            )
+
         if self.app:
             self.app.logger.info(
                 f"StartRunForm input validated: runs_folder={folder}, lesion={lesion}"
             )
 
         if lesion == "no":
-            self.app.show_warp_form()
+            # Go to warp form (original workflow)
+            if self.app and hasattr(self.app, "show_warp_form"):
+                self.app.show_warp_form()
         else:
-            messagebox.showinfo(
-                "Info", "Warped option selected; next screen not implemented."
-            )
-
-    def save_data(self, app_data):
-        app_data["runs_folder"] = self.runs_folder_var.get()
-        app_data["lesion_var"] = self.lesion_var.get()
-
-    def load_data(self, app_data):
-        self.runs_folder_var.set(app_data.get("runs_folder", ""))
-        self.lesion_var.set(app_data.get("lesion_var", ""))
-        self.runs_folder_error.set("")  # clear inline error on load
-        self.lesion_error.set("")
+            # Go to warped lesion form (new workflow)
+            if self.app and hasattr(self.app, "show_warped_lesion_form"):
+                self.app.show_warped_lesion_form()

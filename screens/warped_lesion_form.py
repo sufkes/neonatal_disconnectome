@@ -1,19 +1,19 @@
 """
-Updated WarpForm using StateManager instead of dict-based state
+Warped Lesion Form - For processing pre-warped lesion masks
+
+This screen is shown when the user indicates their lesion mask is already
+warped to a dHCP template. It only requires lesion mask, subject ID, and
+gestational age.
 """
 
 import customtkinter as ctk
 from tkinter import filedialog
-from PIL import Image
-import os
 import threading
 
-from lib.makeThumbnails import plotThreeView
-from lib.constants import THUMBNAIL_BRAIN_IMAGE, THUMBNAILS_DIR
 from .loading_overlay import LoadingOverlay
 
 
-class WarpForm(ctk.CTkFrame):
+class WarpedLesionForm(ctk.CTkFrame):
     def __init__(self, master, go_back_callback=None, app=None):
         super().__init__(master)
         self.go_back_callback = go_back_callback
@@ -26,84 +26,60 @@ class WarpForm(ctk.CTkFrame):
 
         row_index = 0
 
+        # Main form frame
         self.form_frame = ctk.CTkFrame(self, corner_radius=0)
         self.form_frame.grid(row=row_index, column=0, sticky="ew", padx=10, pady=10)
         self.form_frame.grid_columnconfigure(0, weight=1)
 
         row_index += 1
 
-        # Image Data Section
-        self.image_data_label = ctk.CTkLabel(
+        # Header with info message
+        self.header_label = ctk.CTkLabel(
             self.form_frame,
-            text="Image Data",
-            font=ctk.CTkFont(size=16, weight="bold"),
+            text="Pre-Warped Lesion Processing",
+            font=ctk.CTkFont(size=20, weight="bold"),
             padx=10,
             pady=10,
         )
-        self.image_data_label.grid(
-            row=row_index, column=0, sticky="w", padx=20, pady=(0, 10)
+        self.header_label.grid(
+            row=row_index, column=0, sticky="w", padx=20, pady=(10, 5)
         )
         row_index += 1
 
-        # Brain Image
-        self.brain_image_path = ctk.StringVar()
-        self.brain_image_error = ctk.StringVar()
-
-        self.brain_label = ctk.CTkLabel(
+        info_text = (
+            "You indicated that your lesion mask is already warped to a dHCP template. "
+            "Please provide the warped lesion mask and subject information below."
+        )
+        self.info_label = ctk.CTkLabel(
             self.form_frame,
-            text="Subject brain image in NIFTI format (.nii or .nii.gz):",
+            text=info_text,
+            wraplength=580,
+            justify="left",
+            font=ctk.CTkFont(size=12),
         )
-        self.brain_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(0, 5))
-        row_index += 1
-
-        self.brain_image_entry = ctk.CTkEntry(
-            self.form_frame, textvariable=self.brain_image_path, state="readonly"
-        )
-        self.brain_image_entry.grid(
-            row=row_index, column=0, sticky="ew", padx=(20, 110)
-        )
-
-        self.brain_browse_button = ctk.CTkButton(
-            self.form_frame, text="Browse...", command=self.browse_brain_image
-        )
-        self.brain_browse_button.grid(row=row_index, column=1, sticky="w", padx=(0, 20))
-        row_index += 1
-
-        self.brain_image_error_label = ctk.CTkLabel(
-            self.form_frame, textvariable=self.brain_image_error, text_color="red"
-        )
-        self.brain_image_error_label.grid(
-            row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(5, 10)
+        self.info_label.grid(
+            row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(0, 20)
         )
         row_index += 1
 
-        # Thumbnail
-        self.thumbnail_img = None
-        self.thumbnail_label = ctk.CTkLabel(self.form_frame, text="")
-        self.thumbnail_label.grid(
-            row=row_index, column=0, columnspan=2, sticky="ew", padx=20, pady=(10, 20)
-        )
-        row_index += 3
-
-        caption_text = (
-            "Preview of subject brain image in sagittal, coronal, and axial planes"
-        )
-        self.caption_label = ctk.CTkLabel(
+        # Lesion Mask Section
+        self.lesion_section_label = ctk.CTkLabel(
             self.form_frame,
-            text=caption_text,
-            font=ctk.CTkFont(size=11, slant="italic"),
-            justify="center",
-            anchor="center",
+            text="Lesion Data",
+            font=ctk.CTkFont(size=16, weight="bold"),
         )
-        # Caption will be shown after image is loaded
+        self.lesion_section_label.grid(
+            row=row_index, column=0, sticky="w", padx=20, pady=(10, 10)
+        )
+        row_index += 1
 
-        # Lesion Mask
+        # Lesion Mask Path
         self.lesion_mask_path = ctk.StringVar()
         self.lesion_mask_error = ctk.StringVar()
 
         self.lesion_label = ctk.CTkLabel(
             self.form_frame,
-            text="Subject brain lesion mask in NIFTI format (.nii or .nii.gz):",
+            text="Warped lesion mask in NIFTI format (.nii or .nii.gz):",
         )
         self.lesion_label.grid(
             row=row_index, column=0, sticky="w", padx=20, pady=(0, 5)
@@ -129,6 +105,37 @@ class WarpForm(ctk.CTkFrame):
             self.form_frame, textvariable=self.lesion_mask_error, text_color="red"
         )
         self.lesion_mask_error_label.grid(
+            row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(5, 10)
+        )
+        row_index += 1
+
+        # Template Age Info
+        self.template_age_label = ctk.CTkLabel(
+            self.form_frame,
+            text="Age of dHCP template image to which lesion mask is warped, in weeks:",
+        )
+        self.template_age_label.grid(
+            row=row_index, column=0, sticky="w", padx=20, pady=(10, 5)
+        )
+        row_index += 1
+
+        self.template_age = ctk.StringVar()
+        self.template_age_error = ctk.StringVar()
+
+        self.template_age_entry = ctk.CTkEntry(
+            self.form_frame,
+            textvariable=self.template_age,
+            placeholder_text="e.g., 32, 36, 40",
+        )
+        self.template_age_entry.grid(
+            row=row_index, column=0, columnspan=2, sticky="ew", padx=20
+        )
+        row_index += 1
+
+        self.template_age_error_label = ctk.CTkLabel(
+            self.form_frame, textvariable=self.template_age_error, text_color="orange"
+        )
+        self.template_age_error_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(5, 10)
         )
         row_index += 1
@@ -164,12 +171,12 @@ class WarpForm(ctk.CTkFrame):
         row_index += 1
 
         # Subject Data Section
-        self.subject_label = ctk.CTkLabel(
+        self.subject_section_label = ctk.CTkLabel(
             self.form_frame,
-            text="Subject data",
+            text="Subject Data",
             font=ctk.CTkFont(size=16, weight="bold"),
         )
-        self.subject_label.grid(
+        self.subject_section_label.grid(
             row=row_index, column=0, sticky="w", padx=20, pady=(15, 10)
         )
         row_index += 1
@@ -203,27 +210,17 @@ class WarpForm(ctk.CTkFrame):
         )
         row_index += 1
 
-        # Gestational Age
-        self.gest_age = ctk.StringVar()
-        self.gest_age_error = ctk.StringVar()
-
-        self.gest_label = ctk.CTkLabel(
-            self.form_frame, text="Subject's gestational age at scan time (weeks):"
+        # Additional Info
+        self.note_label = ctk.CTkLabel(
+            self.form_frame,
+            text="Note: Since your lesion is pre-warped, we will skip the initial warping step and proceed directly to disconnectome generation.",
+            wraplength=580,
+            justify="left",
+            font=ctk.CTkFont(size=11, slant="italic"),
+            text_color="gray",
         )
-        self.gest_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(10, 5))
-        row_index += 1
-
-        self.gest_entry = ctk.CTkEntry(self.form_frame, textvariable=self.gest_age)
-        self.gest_entry.grid(
-            row=row_index, column=0, columnspan=2, sticky="ew", padx=20
-        )
-        row_index += 1
-
-        self.gest_age_error_label = ctk.CTkLabel(
-            self.form_frame, textvariable=self.gest_age_error, text_color="orange"
-        )
-        self.gest_age_error_label.grid(
-            row=row_index, column=0, columnspan=2, sticky="w", padx=20
+        self.note_label.grid(
+            row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(20, 10)
         )
         row_index += 1
 
@@ -258,61 +255,10 @@ class WarpForm(ctk.CTkFrame):
         processing = self.state_manager.get_processing()
 
         # Load values into form
-        self.brain_image_path.set(processing.brain_image_path)
         self.lesion_mask_path.set(processing.lesion_mask_path)
         self.brain_type.set(processing.brain_type)
         self.subject_id.set(processing.subject_id)
-        self.gest_age.set(processing.gestational_age)
-
-        # Load thumbnail if brain image exists
-        if processing.brain_image_path and os.path.exists(processing.brain_image_path):
-            self._load_thumbnail_if_exists()
-
-    def _load_thumbnail_if_exists(self):
-        """Load thumbnail preview if it exists"""
-        outpath = os.path.join(THUMBNAILS_DIR, THUMBNAIL_BRAIN_IMAGE)
-        if os.path.exists(outpath):
-            try:
-                thumbnail_pil = Image.open(outpath)
-                self.thumbnail_img = ctk.CTkImage(
-                    light_image=thumbnail_pil,
-                    dark_image=thumbnail_pil,
-                    size=thumbnail_pil.size,
-                )
-                self.thumbnail_label.configure(image=self.thumbnail_img, text="")
-
-                if not self.caption_label.winfo_ismapped():
-                    self.caption_label.grid(row=7, column=0, pady=(2, 15))
-                    self.form_frame.grid_columnconfigure(0, weight=1)
-            except Exception as e:
-                if self.app:
-                    self.app.logger.error(f"Failed to load thumbnail: {e}")
-
-    def browse_brain_image(self):
-        """Browse for brain image file"""
-        path = filedialog.askopenfilename(
-            filetypes=[("NIFTI files", "*.nii"), ("NIFTI files", "*.nii.gz")]
-        )
-
-        if path:
-            self.brain_image_path.set(path)
-            self.brain_image_error.set("")
-
-            # Update state manager
-            if self.state_manager:
-                self.state_manager.update_processing(brain_image_path=path)
-
-            # Generate thumbnail asynchronously
-            def generate_thumbnail():
-                try:
-                    outpath = os.path.join(THUMBNAILS_DIR, THUMBNAIL_BRAIN_IMAGE)
-                    plotThreeView(path, outpath)
-                    self.after(0, self._load_thumbnail_if_exists)
-                except Exception as e:
-                    if self.app:
-                        self.app.logger.error(f"Thumbnail generation failed: {e}")
-
-            threading.Thread(target=generate_thumbnail, daemon=True).start()
+        self.template_age.set(processing.template_age)
 
     def browse_lesion_mask(self):
         """Browse for lesion mask file"""
@@ -330,7 +276,7 @@ class WarpForm(ctk.CTkFrame):
 
     def validate_form(self) -> tuple[bool, dict[str, str]]:
         """
-        Validate form inputs using state manager validation
+        Validate form inputs
 
         Returns:
             Tuple of (is_valid, error_dict)
@@ -345,9 +291,7 @@ class WarpForm(ctk.CTkFrame):
             # Map errors to form fields
             error_dict = {}
             for error in errors:
-                if "brain image" in error.lower():
-                    error_dict["brain_image"] = error
-                elif "lesion mask" in error.lower():
+                if "lesion mask" in error.lower():
                     error_dict["lesion_mask"] = error
                 elif (
                     "brain type" in error.lower() or "brain image type" in error.lower()
@@ -355,17 +299,16 @@ class WarpForm(ctk.CTkFrame):
                     error_dict["brain_type"] = error
                 elif "subject id" in error.lower():
                     error_dict["subject_id"] = error
-                elif "gestational age" in error.lower():
-                    error_dict["gest_age"] = error
+                elif "template age" in error.lower():
+                    error_dict["template_age"] = error
 
             # Update UI with errors
-            self.brain_image_error.set(error_dict.get("brain_image", ""))
             self.lesion_mask_error.set(error_dict.get("lesion_mask", ""))
-            self.brain_type_error.set(error_dict.get("brain_type", ""))
+            self.template_age_error.set(error_dict.get("template_age", ""))
             self.subject_id_error.set(error_dict.get("subject_id", ""))
-            self.gest_age_error.set(error_dict.get("gest_age", ""))
+            self.brain_type_error.set(error_dict.get("brain_type", ""))
 
-            return is_valid, error_dict
+            return is_valid, errors
 
         # Fallback to basic validation if no state manager
         return True, {}
@@ -376,11 +319,11 @@ class WarpForm(ctk.CTkFrame):
             return
 
         self.state_manager.update_processing(
-            brain_image_path=self.brain_image_path.get(),
             lesion_mask_path=self.lesion_mask_path.get(),
-            brain_type=self.brain_type.get(),
             subject_id=self.subject_id.get(),
-            gestational_age=self.gest_age.get(),
+            template_age=self.template_age.get(),
+            lesion_already_warped=True,  # Mark that lesion is already warped
+            brain_type=self.brain_type.get(),
         )
 
     def on_next(self):
@@ -392,69 +335,73 @@ class WarpForm(ctk.CTkFrame):
                 self.app.logger.warning(f"Form validation failed: {errors}")
             return
 
-        # Proceed to next step
-        if hasattr(self.app, "show_disconnectome_form"):
+        # Proceed to processing
+        if self.app:
             self.next_button.configure(state="disabled")
             self.back_button.configure(state="disabled")
             self.loading_overlay.show()
 
-            # Get values from state manager
             processing = self.state_manager.get_processing()
-            config = self.state_manager.get_config()
 
-            runs_dir = config.runs_folder
-            subject = processing.subject_id
+            # Get values from form
+            lesion_path = self.lesion_mask_path.get()
+            subject_id = self.subject_id.get()
+            template_age = self.template_age.get()
             image_type = processing.brain_type
-            moving_image = processing.brain_image_path
-            lesion_image = processing.lesion_mask_path
-            age = processing.gestational_age
+
+            # Get runs folder from config
+            config = self.state_manager.get_config()
+            runs_dir = config.runs_folder
 
             if self.app:
                 self.app.logger.info(
-                    f"Starting Step 1:\n"
+                    f"Starting Warped Lesion Processing:\n"
                     f"  runs_dir: {runs_dir}\n"
-                    f"  subject: {subject}\n"
+                    f"  subject: {subject_id}\n"
                     f"  image_type: {image_type}\n"
-                    f"  moving_image: {moving_image}\n"
-                    f"  lesion_image: {lesion_image}\n"
-                    f"  age: {age}"
+                    f"  lesion_mask: {lesion_path}\n"
+                    f"  template_age: {template_age}\n"
                 )
 
-            # Run step1 in background thread
-            def run_step1():
+            # Run processing in background thread
+            def run_warped_processing():
                 try:
-                    # Option 1: Use state-based function directly
-                    from backend.logic import step1_from_state
+                    from backend.logic import process_warped_lesion_from_state
 
-                    success = step1_from_state(processing, config)
+                    success = process_warped_lesion_from_state(processing, config)
 
-                    self.after(0, lambda: self.on_step1_complete(success))
+                    self.after(0, lambda: self.on_processing_complete(success))
                 except Exception as e:
                     if self.app:
-                        self.app.logger.error(f"Step1 failed: {e}", exc_info=True)
-                    self.after(0, lambda: self.on_step1_complete(False))
+                        self.app.logger.error(
+                            f"Warped lesion processing failed: {e}", exc_info=True
+                        )
+                    self.after(0, lambda: self.on_processing_complete(False))
 
-            threading.Thread(target=run_step1, daemon=True).start()
-            # start polling for state changes
-            self.app.poll_processing_state()
+            threading.Thread(target=run_warped_processing, daemon=True).start()
 
-    def on_step1_complete(self, success):
-        """Handle completion of step1"""
+    def on_processing_complete(self, success):
+        """Handle completion of processing"""
         self.loading_overlay.hide()
         self.next_button.configure(state="normal")
         self.back_button.configure(state="normal")
 
         if success:
-            # Update state to mark step1 as completed
+            # Update state to mark processing as completed
             if self.state_manager:
-                self.state_manager.update_processing(step1_completed=True)
+                self.state_manager.update_processing(
+                    step1_completed=True,  # Skip step 1 since lesion is warped
+                    step2_completed=True,  # Processing complete
+                )
 
-            # Navigate to next screen
-            if self.app:
-                self.app.show_disconnectome_form()
+            # Navigate to final results
+            if self.app and hasattr(self.app, "show_final_result"):
+                self.app.show_final_result()
         else:
             if self.app:
-                self.app.logger.error("Step1 failed. Please check logs and try again.")
+                self.app.logger.error(
+                    "Warped lesion processing failed. Please check logs."
+                )
 
     def go_back(self):
         """Handle back button click"""
@@ -462,42 +409,34 @@ class WarpForm(ctk.CTkFrame):
         if self.go_back_callback:
             self.go_back_callback()
 
-    # DEPRECATED: Keep for backward compatibility
-    def save_data(self, app_data):
-        """DEPRECATED: Use state_manager instead"""
-        self._save_to_state()
-
-    def load_data(self, app_data):
-        """DEPRECATED: Use state_manager instead"""
-        self._load_from_state()
-
     def update_theme(self):
         """Update theme for all widgets"""
         theme = ctk.ThemeManager.theme
 
         self.configure(fg_color=theme["CTkFrame"]["fg_color"])
+        self.form_frame.configure(fg_color=theme["CTkFrame"]["fg_color"])
 
         # Update labels
         label_fg = theme["CTkLabel"]["text_color"]
         for lbl in [
-            self.image_data_label,
-            self.brain_label,
+            self.header_label,
+            self.info_label,
+            self.lesion_section_label,
             self.lesion_label,
-            self.type_label,
-            self.subject_label,
+            self.template_age_label,
+            self.subject_section_label,
             self.subject_id_label,
-            self.gest_label,
-            self.caption_label,
+            self.note_label,
         ]:
-            lbl.configure(text_color=label_fg)
+            if lbl.winfo_exists():
+                lbl.configure(text_color=label_fg)
 
         # Update entries
         entry_theme = theme["CTkEntry"]
         for entry in [
-            self.brain_image_entry,
             self.lesion_mask_entry,
+            self.template_age_entry,
             self.subject_id_entry,
-            self.gest_entry,
         ]:
             entry.configure(
                 fg_color=entry_theme["fg_color"],
@@ -507,20 +446,10 @@ class WarpForm(ctk.CTkFrame):
 
         # Update buttons
         button_theme = theme["CTkButton"]
-        for btn in [
-            self.back_button,
-            self.next_button,
-            self.brain_browse_button,
-            self.lesion_browse_button,
-        ]:
+        for btn in [self.back_button, self.next_button, self.lesion_browse_button]:
             if btn.winfo_exists():
                 btn.configure(
                     fg_color=button_theme["fg_color"],
                     hover_color=button_theme["hover_color"],
                     text_color=button_theme["text_color"],
                 )
-
-        # Update radio buttons
-        radio_theme = theme["CTkRadioButton"]
-        for rb in [self.t1_radio_button, self.t2_radio_button]:
-            rb.configure(text_color=radio_theme["text_color"])
