@@ -9,7 +9,7 @@ from lib.constants import (
     TEMPLATE_TEMPLATES_DIR,
     TEMPLATE_WARPS_DIR,
 )
-from lib.utils import createDisconnectomeDirectory
+from lib.utils import createDisconnectomeDirectory, thresholdWarpedLesion
 
 logger = logging.getLogger(__name__)
 
@@ -88,11 +88,16 @@ def applySubjectLesionToControlImageWarp(
             )
 
             # TODO
-            # account for volume difference
-            # change lesion volume before saving
-            # get age and run nibable script
-            # call function in utils.py
-            # overwrite lesion_in_control_image_space based on return result of function
+            ## Steve update: When the lesion is warped from native to control space, the lesion gets "smeared out" by resampling/interpolation. The warped lesion in control space will typically have greater volume than the original lesion. To fix this, we threshold the warped lesion such that its volume is the same as the original lesion, but multiplied by some factor to account for the differences in brain volumes between the lesion and control subjects. Since we do not know the brain volumes of the lesion or control subjects, we estimate using a linear function of brain volume vs. gestational age.
+            control_age_path = os.path.join(
+                CONTROLS_DIR, d, sub_dir_list[0], "scan_age.txt"
+            )
+            with open(control_age_path) as handle:
+                control_age = handle.read()
+
+            lesion_in_control_image_space = thresholdWarpedLesion(
+                lesion_ants_img, lesion_in_control_image_space, age, control_age
+            )
 
             # (3) Save the lesion mask in control image space:
             out_image_prefix = os.path.join(runs_control_space_path, sub_name)
@@ -114,6 +119,9 @@ def applySubjectLesionToControlImageWarp(
             moving=lesion_ants_img,
             transformlist=transformlist[1:],
             verbose=False,
+        )
+        lesion_warped_to_40_week = thresholdWarpedLesion(
+            lesion_ants_img, lesion_warped_to_40_week, age, 40
         )
 
         disconnectome_out_dir = createDisconnectomeDirectory(runs_dir, subject)
