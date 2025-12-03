@@ -339,7 +339,11 @@ class WarpedLesionForm(ctk.CTkFrame):
         if self.app:
             self.next_button.configure(state="disabled")
             self.back_button.configure(state="disabled")
-            self.loading_overlay.show()
+            # Show loading with descriptive status
+            self.loading_overlay.show(
+                status="Generating Disconnectome",
+                detail="This may take several minutes...",
+            )
 
             processing = self.state_manager.get_processing()
 
@@ -368,7 +372,9 @@ class WarpedLesionForm(ctk.CTkFrame):
                 try:
                     from backend.logic import process_warped_lesion_from_state
 
-                    success = process_warped_lesion_from_state(processing, config)
+                    success = process_warped_lesion_from_state(
+                        processing, config, self.state_manager
+                    )
 
                     self.after(0, lambda: self.on_processing_complete(success))
                 except Exception as e:
@@ -379,6 +385,28 @@ class WarpedLesionForm(ctk.CTkFrame):
                     self.after(0, lambda: self.on_processing_complete(False))
 
             threading.Thread(target=run_warped_processing, daemon=True).start()
+            # start polling for state changes
+            self.app.poll_processing_state()
+            # Also poll loading overlay updates
+            self.poll_loading_updates()
+
+    def poll_loading_updates(self):
+        """Update loading overlay with processing details"""
+        processing = self.state_manager.get_processing()
+
+        if processing.current_step == "step2_running":
+            self.loading_overlay.update_status(
+                detail=processing.current_step_details or "Processing...",
+                progress=processing.step2_progress,
+            )
+            # Continue polling
+            self.after(500, self.poll_loading_updates)
+        elif processing.current_step in ["step2_complete", "step2_failed"]:
+            # Final update
+            if processing.current_step == "step2_complete":
+                self.loading_overlay.update_status(
+                    status="Complete!", detail="", progress=1.0
+                )
 
     def on_processing_complete(self, success):
         """Handle completion of processing"""

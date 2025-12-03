@@ -9,8 +9,6 @@ from lib.constants import TEMPLATE_DIR, THUMBNAILS
 from lib.utils import getRoundedAge, open_in_file_browser
 from .loading_overlay import LoadingOverlay
 
-from backend.logging_utils import run_step2_with_logging
-
 
 class DisconnectomeForm(ctk.CTkFrame):
     def __init__(self, master, go_back_callback=None, app=None):
@@ -189,110 +187,37 @@ class DisconnectomeForm(ctk.CTkFrame):
             copy_command=command,
         )
 
-        # add output text
-        # self.app.add_path(
-        #     "input brain image warped to age-matched template",
-        #     pathToWarpedSubjectBrainImage,
-        #     "output",
-        # )
-        # self.app.add_path(
-        #     "input lesion image warped to age-matched template",
-        #     pathToLegionMaskInAgeMatchedTemplateSpace,
-        #     "output",
-        # )
-
-        pathToAgeMatchedTemplateOutput = os.path.join(
-            runs_folder.split("/runs")[0],
-            "template",
-            "templates",
-            "week" + roundedAge + "_" + brain_type + ".nii.gz",
-        )
-        # self.app.add_path(
-        #     "age-matched template image(fixed image for warp step)",
-        #     pathToAgeMatchedTemplateOutput,
-        #     "output",
-        # )
-
     def create_preview_section(self, parent, image_key, caption, copy_command):
-        # Configure parent's grid for layout
-        parent.grid_rowconfigure(
-            1, weight=1
-        )  # Make caption label expand vertically as needed
+        """Create preview section with image, caption, and clean command display"""
+        # Configure parent grid
+        parent.grid_rowconfigure(2, weight=1)  # Caption can expand
         parent.grid_columnconfigure(0, weight=1)
 
-        image_label = ctk.CTkLabel(parent, image=self.images[image_key], text="")
-        image_label.grid(row=0, column=0, pady=(10, 5))
+        current_row = 0
 
+        # Image
+        if image_key in self.images:
+            image_label = ctk.CTkLabel(parent, image=self.images[image_key], text="")
+            image_label.grid(row=current_row, column=0, pady=(10, 5))
+            current_row += 1
+
+        # Caption
         caption_label = ctk.CTkLabel(
-            parent, text=caption, wraplength=580, justify="center"
-        )
-        caption_label.grid(row=1, column=0, pady=(0, 10), sticky="ew")
-
-        instruction_label = ctk.CTkLabel(
             parent,
-            text="The following command can be used to open the image above in FSLeyes:",
+            text=caption,
+            wraplength=500,  # Slightly narrower
+            justify="center",
+            font=ctk.CTkFont(size=10),  # Smaller font
         )
-        instruction_label.grid(row=2, column=0, sticky="w")
-
-        command_container = ctk.CTkFrame(parent)
-        command_container.grid(row=3, column=0, padx=(10, 5), pady=5, sticky="ew")
-        command_container.grid_columnconfigure(0, weight=1)  # scrollable part expands
-        command_container.grid_rowconfigure(0, weight=0)
-
-        command_frame = ctk.CTkScrollableFrame(
-            command_container, orientation="horizontal", height=40
+        caption_label.grid(
+            row=current_row, column=0, pady=(0, 10), sticky="ew", padx=10
         )
-        command_frame.grid(row=0, column=0, sticky="ew")
-        command_frame.grid_rowconfigure(0, weight=1)
+        current_row += 1
 
-        # Split command like: "fsleyes path1 path2"
-        parts = copy_command.split()
-        base_command = parts[0]  # "fsleyes"
+        # Command display using utility function
+        from lib.gui_utils import create_command_display  # Create this new file
 
-        # Label for the static 'fsleyes ' part
-        base_label = ctk.CTkLabel(command_frame, text=base_command + " ")
-        base_label.grid(row=0, column=0, sticky="w", padx=(10, 5), pady=5)
-
-        # Label for each path, clickable
-        for i, part in enumerate(parts[1:]):
-            if Path(part).exists():
-                clickable_label = ctk.CTkLabel(
-                    command_frame,
-                    text=part,
-                    text_color="#0074d9",
-                    cursor="hand2",
-                    underline=True,
-                    wraplength=0,
-                    justify="left",
-                )
-                clickable_label.grid(
-                    row=0, column=i + 1, sticky="w", padx=(5, 0), pady=5
-                )
-                clickable_label.bind(
-                    "<Button-1>", lambda e, p=part: open_in_file_browser(p)
-                )
-            else:
-                # Non-clickable text
-                normal_label = ctk.CTkLabel(
-                    command_frame,
-                    text=part,
-                    wraplength=0,
-                    justify="left",
-                    text_color="black",
-                )
-                normal_label.grid(row=0, column=i + 1, sticky="w", padx=(5, 0), pady=5)
-
-        # Fixed frame for copy button
-        copy_button_frame = ctk.CTkFrame(command_container, width=80)
-        copy_button_frame.grid(row=0, column=1, sticky="ns")
-        copy_button_frame.grid_propagate(False)  # prevent resizing
-        copy_button = ctk.CTkButton(
-            copy_button_frame,
-            text="Copy",
-            width=60,
-            command=lambda: self.copy_to_clipboard(copy_command),
-        )
-        copy_button.grid(row=0, column=0, padx=10, pady=5)
+        create_command_display(parent, copy_command, row_start=current_row)
 
     def copy_to_clipboard(self, text):
         try:
@@ -322,7 +247,11 @@ class DisconnectomeForm(ctk.CTkFrame):
             self.next_button.configure(state="disabled")
             self.back_button.configure(state="disabled")
 
-            self.loading_overlay.show()
+            # Show loading with descriptive status
+            self.loading_overlay.show(
+                status="Generating Disconnectome",
+                detail="This may take several minutes...",
+            )
 
             # Get values from state manager
             processing = self.state_manager.get_processing()
@@ -349,7 +278,7 @@ class DisconnectomeForm(ctk.CTkFrame):
                 try:
                     from backend.logic import step2_from_state
 
-                    success = step2_from_state(processing, config)
+                    success = step2_from_state(processing, config, self.state_manager)
                     # Schedule UI update on main thread:
                     self.after(0, lambda: self.on_step2_complete(success))
                 except Exception as e:
@@ -362,6 +291,26 @@ class DisconnectomeForm(ctk.CTkFrame):
             threading.Thread(target=run_step2, daemon=True).start()
             # start polling for state changes
             self.app.poll_processing_state()
+            # Also poll loading overlay updates
+            self.poll_loading_updates()
+
+    def poll_loading_updates(self):
+        """Update loading overlay with processing details"""
+        processing = self.state_manager.get_processing()
+
+        if processing.current_step == "step2_running":
+            self.loading_overlay.update_status(
+                detail=processing.current_step_details or "Processing...",
+                progress=processing.step2_progress,
+            )
+            # Continue polling
+            self.after(500, self.poll_loading_updates)
+        elif processing.current_step in ["step2_complete", "step2_failed"]:
+            # Final update
+            if processing.current_step == "step2_complete":
+                self.loading_overlay.update_status(
+                    status="Complete!", detail="", progress=1.0
+                )
 
     def on_step2_complete(self, success):
         # Hide loading overlay and re-enable button

@@ -91,7 +91,7 @@ class WarpForm(ctk.CTkFrame):
         self.caption_label = ctk.CTkLabel(
             self.form_frame,
             text=caption_text,
-            font=ctk.CTkFont(size=11, slant="italic"),
+            font=ctk.CTkFont(size=11),
             justify="center",
             anchor="center",
         )
@@ -396,7 +396,12 @@ class WarpForm(ctk.CTkFrame):
         if hasattr(self.app, "show_disconnectome_form"):
             self.next_button.configure(state="disabled")
             self.back_button.configure(state="disabled")
-            self.loading_overlay.show()
+
+            # Show loading with descriptive status
+            self.loading_overlay.show(
+                status="Warping to Age-Matched Template",
+                detail="This may take several minutes...",
+            )
 
             # Get values from state manager
             processing = self.state_manager.get_processing()
@@ -426,7 +431,7 @@ class WarpForm(ctk.CTkFrame):
                     # Option 1: Use state-based function directly
                     from backend.logic import step1_from_state
 
-                    success = step1_from_state(processing, config)
+                    success = step1_from_state(processing, config, self.state_manager)
 
                     self.after(0, lambda: self.on_step1_complete(success))
                 except Exception as e:
@@ -437,6 +442,26 @@ class WarpForm(ctk.CTkFrame):
             threading.Thread(target=run_step1, daemon=True).start()
             # start polling for state changes
             self.app.poll_processing_state()
+            # Also poll loading overlay updates
+            self.poll_loading_updates()
+
+    def poll_loading_updates(self):
+        """Update loading overlay with processing details"""
+        processing = self.state_manager.get_processing()
+
+        if processing.current_step == "step1_running":
+            self.loading_overlay.update_status(
+                detail=processing.current_step_details or "Processing...",
+                progress=processing.step1_progress,
+            )
+            # Continue polling
+            self.after(500, self.poll_loading_updates)
+        elif processing.current_step in ["step1_complete", "step1_failed"]:
+            # Final update
+            if processing.current_step == "step1_complete":
+                self.loading_overlay.update_status(
+                    status="Complete!", detail="", progress=1.0
+                )
 
     def on_step1_complete(self, success):
         """Handle completion of step1"""

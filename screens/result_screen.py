@@ -6,6 +6,7 @@ from PIL import Image
 
 from lib.constants import THUMBNAIL_DISCONNECTOME, THUMBNAILS, TEMPLATE_DIR
 from lib.utils import open_in_file_browser
+from lib.gui_utils import create_command_display
 
 
 class FinalResult(ctk.CTkFrame):
@@ -79,7 +80,7 @@ class FinalResult(ctk.CTkFrame):
                 # Build command similar to DisconnectomeForm logic
                 command = self.build_command()
                 # Display the command parts dynamically with clickable paths
-                self.display_clickable_command(command)
+                create_command_display(self, command, row_start=2)
                 # Display the disconnectome image
                 self.set_image()
             except Exception as e:
@@ -126,82 +127,6 @@ class FinalResult(ctk.CTkFrame):
         command = f"fsleyes {pathTo40WeekTemplateImage} {pathToDisconnectomeMap} -cm red-yellow {pathToLegionMaskIn40WeekTemplateSpace} -cm blue-lightblue"
 
         return command
-
-    def display_clickable_command(self, copy_command):
-        # Remove any existing command display widgets
-        for widget in self.winfo_children():
-            if isinstance(widget, ctk.CTkLabel) and widget != self.caption_label:
-                if "command" in str(widget).lower():
-                    widget.destroy()
-            elif isinstance(widget, ctk.CTkFrame):
-                # Check if this is a command frame (not figure_frame or title_frame)
-                if widget != self.figure_frame and widget != self.winfo_children()[0]:
-                    widget.destroy()
-
-        instruction_label = ctk.CTkLabel(
-            self,
-            text="The following command can be used to open the image above in FSLeyes:",
-        )
-        instruction_label.grid(row=2, column=0, padx=20, sticky="w")
-
-        command_container = ctk.CTkFrame(self)
-        command_container.grid(row=3, column=0, padx=20, pady=5, sticky="ew")
-        command_container.grid_columnconfigure(0, weight=1)
-        command_container.grid_rowconfigure(0, weight=0)
-
-        command_frame = ctk.CTkScrollableFrame(
-            command_container, orientation="horizontal", height=40
-        )
-        command_frame.grid(row=0, column=0, sticky="ew")
-        command_frame.grid_rowconfigure(0, weight=1)
-
-        # Split command like: "fsleyes path1 path2"
-        parts = copy_command.split()
-        base_command = parts[0]  # "fsleyes"
-
-        # Label for the static 'fsleyes ' part
-        base_label = ctk.CTkLabel(command_frame, text=base_command + " ")
-        base_label.grid(row=0, column=0, sticky="w", padx=(10, 5), pady=5)
-
-        # Label for each path, clickable
-        for i, part in enumerate(parts[1:]):
-            if Path(part).exists():
-                clickable_label = ctk.CTkLabel(
-                    command_frame,
-                    text=part,
-                    text_color="#0074d9",
-                    cursor="hand2",
-                    underline=True,
-                    wraplength=0,
-                    justify="left",
-                )
-                clickable_label.grid(
-                    row=0, column=i + 1, sticky="w", padx=(5, 0), pady=5
-                )
-                clickable_label.bind(
-                    "<Button-1>", lambda e, p=part: open_in_file_browser(p)
-                )
-            else:
-                # Non-clickable text (probably a flag like -cm)
-                normal_label = ctk.CTkLabel(
-                    command_frame,
-                    text=part,
-                    wraplength=0,
-                    justify="left",
-                )
-                normal_label.grid(row=0, column=i + 1, sticky="w", padx=(5, 0), pady=5)
-
-        # Fixed frame for copy button
-        copy_button_frame = ctk.CTkFrame(command_container, width=80)
-        copy_button_frame.grid(row=0, column=1, sticky="ns")
-        copy_button_frame.grid_propagate(False)
-        copy_button = ctk.CTkButton(
-            copy_button_frame,
-            text="Copy",
-            width=60,
-            command=lambda: self.copy_to_clipboard(copy_command),
-        )
-        copy_button.grid(row=0, column=0, padx=10, pady=5)
 
     def set_image(self):
         """Load and display the disconnectome thumbnail"""

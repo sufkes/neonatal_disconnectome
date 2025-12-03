@@ -25,7 +25,9 @@ from .step5MakeDisconnectomeMap import generateDisconnectome
 logger = logging.getLogger(__name__)
 
 
-def step1_from_state(processing: ProcessingState, config: AppConfig) -> bool:
+def step1_from_state(
+    processing: ProcessingState, config: AppConfig, state_manager=None
+) -> bool:
     """
     Step 1: Warp subject brain image and lesion mask to age-matched template
     Using state objects instead of individual parameters.
@@ -45,12 +47,13 @@ def step1_from_state(processing: ProcessingState, config: AppConfig) -> bool:
         >>> success = step1_from_state(processing, config)
     """
     try:
-        # Mark step as running
-        from lib.state_management import StateManager
-
-        # Assuming we can access the global state_manager or pass it
-        processing.current_step = "step1_running"
-        processing.step1_progress = 0.1
+        # Update state and notify observers
+        if state_manager:
+            state_manager.update_processing(
+                current_step="step1_running",
+                step2_progress=0.1,
+                current_step_details="Starting warp",
+            )
 
         logger.info(f"Starting step1 from state for subject={processing.subject_id}")
 
@@ -73,29 +76,36 @@ def step1_from_state(processing: ProcessingState, config: AppConfig) -> bool:
             f"image_type={image_type}, age={age}"
         )
 
-        processing.step1_progress = 0.3
-        processing.current_step_details = "create control space directory"
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.5,
+                current_step_details="Creating control space directory",
+            )
         createControlSpaceDirectory(subject, runs_dir)
 
-        processing.step1_progress = 0.5
         roundedAge = getRoundedAge(age)
 
-        processing.step1_progress = 0.7
-        processing.current_step_details = "warp subject to age-matched template"
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.95,
+                current_step_details="Warping subject to age-matched template",
+            )
         warpSubjectToAgeMatchedTemplate(
             runs_dir, subject, image_type, moving_image, lesion_image, roundedAge
         )
 
         # Mark as complete
-        processing.step1_progress = 1.0
-        processing.current_step = "step1_complete"
-        processing.step1_completed = True
+        if state_manager:
+            state_manager.update_processing(
+                current_step="step1_complete", step1_progress=1.0, step1_completed=True
+            )
 
         logger.info(f"Step1 completed successfully for subject={subject}")
         return True
 
     except Exception as e:
-        processing.current_step = "step1_failed"
+        if state_manager:
+            state_manager.update_processing(current_step="step1_failed")
         logger.error(
             f"Step1 failed for subject={processing.subject_id}: {e}", exc_info=True
         )
@@ -140,7 +150,10 @@ def step1(
 
 
 def step2_from_state(
-    processing: ProcessingState, config: AppConfig, threshold: float = 0
+    processing: ProcessingState,
+    config: AppConfig,
+    state_manager=None,
+    threshold: float = 0,
 ) -> bool:
     """
     Step 2: Generate disconnectome from warped lesion
@@ -158,12 +171,13 @@ def step2_from_state(
         >>> success = step2_from_state(processing, config, threshold=0)
     """
     try:
-        # Mark step as running
-        from lib.state_management import StateManager
-
-        # Assuming we can access the global state_manager or pass it
-        processing.current_step = "step2_running"
-        processing.step2_progress = 0.1
+        # Update state and notify observers
+        if state_manager:
+            state_manager.update_processing(
+                current_step="step2_running",
+                step2_progress=0.1,
+                current_step_details="Starting Disconectome Generation",
+            )
 
         logger.info(f"Starting step2 from state for subject={processing.subject_id}")
 
@@ -174,7 +188,6 @@ def step2_from_state(
         age = processing.gestational_age
         image_type = processing.brain_type
 
-        processing.step2_progress = 0.3
         roundedAge = getRoundedAge(age)
 
         logger.debug(
@@ -182,34 +195,51 @@ def step2_from_state(
             f"age={roundedAge}, threshold={threshold}"
         )
 
-        processing.step2_progress = 0.5
-        processing.current_step_details = "apply subject lesion to control image warp"
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.3,
+                current_step_details="Applying subject lesion to control image warp",
+            )
         applySubjectLesionToControlImageWarp(
             runs_dir, subject, lesion_image, roundedAge
         )
 
-        processing.step2_progress = 0.7
-        processing.current_step_details = "generate visitation map"
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.5,
+                current_step_details="Generating visitation map",
+            )
         generateVisitationMap(runs_dir, subject)
 
-        processing.step2_progress = 0.8
-        processing.current_step_details = "warp visitation map"
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.7,
+                current_step_details="Warping visitation map",
+            )
+
         warpVisitationMap(runs_dir, subject, image_type)
 
-        processing.step2_progress = 0.9
-        processing.current_step_details = "generate disconnectome"
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.95,
+                current_step_details="Generating disconnectome",
+            )
+
         generateDisconnectome(runs_dir, subject, image_type, threshold)
 
         # Mark as complete
-        processing.step2_progress = 1.0
-        processing.current_step = "step2_complete"
-        processing.step2_completed = True
+        # Mark as complete
+        if state_manager:
+            state_manager.update_processing(
+                current_step="step2_complete", step2_progress=1.0, step2_completed=True
+            )
 
         logger.info(f"Step2 completed successfully for subject={subject}")
         return True
 
     except Exception as e:
-        processing.current_step = "step2_failed"
+        if state_manager:
+            state_manager.update_processing(current_step="step2_failed")
         logger.exception(f"Step2 failed for subject={processing.subject_id}: {e}")
         return False
 
@@ -253,7 +283,9 @@ def step2(
 
 
 def process_warped_lesion_from_state(
-    processing: ProcessingState, config: AppConfig
+    processing: ProcessingState,
+    config: AppConfig,
+    state_manager=None,
 ) -> bool:
     """
     Process a lesion mask that is already warped to a dHCP template
@@ -274,6 +306,14 @@ def process_warped_lesion_from_state(
         >>> success = process_warped_lesion_from_state(processing, config)
     """
     try:
+        # Update state and notify observers
+        if state_manager:
+            state_manager.update_processing(
+                current_step="step2_running",
+                step2_progress=0.1,
+                current_step_details="Starting warped lesion processing",
+            )
+
         logger.info(
             f"Starting warped lesion processing from state for subject={processing.subject_id}"
         )
@@ -305,17 +345,38 @@ def process_warped_lesion_from_state(
         )
 
         # Create necessary directory structure
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.3,
+                current_step_details="Creating control space directory",
+            )
         createControlSpaceDirectory(subject, runs_dir)
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.4,
+                current_step_details="Creating template space directory",
+            )
         createTemplateSpaceDirectory(roundedAge, runs_dir, subject)
 
         # Apply pre-warped lesion to control images (skip=True)
         logger.info("Applying pre-warped lesion to control images...")
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.5,
+                current_step_details="Applying subject lesion to control image warp",
+            )
         applySubjectLesionToControlImageWarp(
             runs_dir, subject, lesion_image, roundedAge, skip=True
         )
 
         # Generate visitation maps
         logger.info("Generating visitation maps...")
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.6,
+                current_step_details="Generating visitation map",
+            )
+
         generateVisitationMap(runs_dir, subject)
 
         # Warp visitation maps to 40w template
@@ -324,16 +385,32 @@ def process_warped_lesion_from_state(
         logger.info(
             f"Warping visitation maps to 40w template (image_type={image_type})..."
         )
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.75,
+                current_step_details="Warping visitation map",
+            )
+
         warpVisitationMap(runs_dir, subject, image_type)
 
         # Generate disconnectome map
         threshold = 0
         logger.info(f"Generating disconnectome map (threshold={threshold})...")
+        if state_manager:
+            state_manager.update_processing(
+                step2_progress=0.95,
+                current_step_details="Generating disconnectome",
+            )
         generateDisconnectome(runs_dir, subject, image_type, threshold)
 
         logger.info(
             f"Warped lesion processing completed successfully for subject={subject}"
         )
+
+        if state_manager:
+            state_manager.update_processing(
+                current_step="step2_complete", step2_progress=1.0, step2_completed=True
+            )
         return True
 
     except FileNotFoundError as e:
@@ -348,6 +425,8 @@ def process_warped_lesion_from_state(
         return False
     except Exception as e:
         logger.error(f"Warped lesion processing failed: {e}", exc_info=True)
+        if state_manager:
+            state_manager.update_processing(current_step="step2_failed")
         return False
 
 

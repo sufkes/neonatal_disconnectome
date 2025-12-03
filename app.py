@@ -93,10 +93,10 @@ class DisconnectomeApp(ctk.CTk):
         self.main_container = ctk.CTkFrame(self)
         self.main_container.grid(row=1, column=0, sticky="nsew")
         self.main_container.grid_rowconfigure(0, weight=1)
-        self.main_container.grid_columnconfigure(0, weight=4)  # main content expands
+        self.main_container.grid_columnconfigure(0, weight=4)  # Main content
         self.main_container.grid_columnconfigure(
-            1, weight=1, minsize=200
-        )  # side panel width
+            1, weight=0, minsize=180
+        )  # Smaller side panel (was 200)
 
         self.create_header()
         self.create_footer()
@@ -121,14 +121,23 @@ class DisconnectomeApp(ctk.CTk):
         self.show_start_form()
 
     def poll_processing_state(self):
+        """Poll processing state every 500ms and update side panel"""
         processing = self.state_manager.get_processing()
 
-        # Always redraw from current state
-        self.on_state_changed("processing")
+        # Update side panel with current state
+        self.update_side_panel()
 
-        # Keep polling while a step is in progress
-        if processing.current_step in ("step1_running", "step2_running"):
-            self.after(200, self.poll_processing_state)  # every 200 ms
+        # Continue polling if processing is running
+        if processing.current_step in ["step1_running", "step2_running"]:
+            self.after(500, self.poll_processing_state)
+        elif processing.current_step in [
+            "step1_complete",
+            "step2_complete",
+            "step1_failed",
+            "step2_failed",
+        ]:
+            # Do one final update after completion/failure
+            self.update_side_panel()
 
     def on_state_changed(self, state_type: str):
         """
@@ -331,23 +340,39 @@ class DisconnectomeApp(ctk.CTk):
         self.toggle_btn.grid(row=0, column=1, sticky="ne", padx=5, pady=5)
 
     def create_side_panel(self):
-        """Create side panel for displaying input/output information"""
+        """Create compact side panel for displaying input/output information"""
         self.sidepanel = ctk.CTkFrame(self.main_container)
         self.sidepanel.grid(row=0, column=1, sticky="nsew")
 
-        self.textbox = tk.Text(self.sidepanel, wrap="word")
-        self.textbox.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        # Use smaller font sizes
+        self.textbox = tk.Text(
+            self.sidepanel,
+            wrap="word",
+            font=("Helvetica", 9),  # Smaller base font
+            padx=5,
+            pady=5,
+        )
+        self.textbox.grid(row=0, column=0, sticky="nsew", padx=3, pady=3)
 
-        header_font = tkfont.Font(family="Helvetica", size=16, weight="bold")
-        title_font = tkfont.Font(family="Helvetica", size=14, weight="bold")
+        # Smaller fonts for headers and labels
+        header_font = tkfont.Font(family="Helvetica", size=11, weight="bold")  # Was 16
+        title_font = tkfont.Font(family="Helvetica", size=10, weight="bold")  # Was 14
 
         self.textbox.tag_configure("header", font=header_font)
         self.textbox.tag_configure("input", font=title_font, foreground="#1EB44D")
         self.textbox.tag_configure("output", font=title_font, foreground="#1EB44D")
 
+        # Status indicator tags
+        self.textbox.tag_configure("success", foreground="green")
+        self.textbox.tag_configure("info", foreground="blue")
+        self.textbox.tag_configure("pending", foreground="gray")
+        self.textbox.tag_configure("warning", foreground="orange")
+
         self.sidepanel.grid_rowconfigure(0, weight=1)
         self.sidepanel.grid_columnconfigure(0, weight=1)
-        self.sidepanel.configure(width=200)
+
+        # Make side panel narrower (was 200, now 180)
+        self.sidepanel.configure(width=180)
 
         # Initialize hyperlink manager
         self.hyperlink_manager = CTkHyperlinkManager(self.textbox, open_in_file_browser)
