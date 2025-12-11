@@ -34,6 +34,14 @@ datas += tmp_ret[0]
 binaries += tmp_ret[1]
 hiddenimports += tmp_ret[2]
 
+# macOS-specific binaries
+if sys.platform == 'darwin':
+    binaries += [
+        ('/System/Library/Frameworks/Tk.framework/Tk', '.'),
+        ('/System/Library/Frameworks/Tcl.framework/Tcl', '.')
+    ]
+
+
 a = Analysis(
     ['app.py'],
     pathex=[],
@@ -63,7 +71,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False if sys.platform == 'darwin' else True,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,  # Set to True for debugging
