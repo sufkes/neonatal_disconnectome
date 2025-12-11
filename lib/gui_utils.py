@@ -19,7 +19,7 @@ def create_command_display(parent, command, row_start=0):
     # Instruction label
     instruction_label = ctk.CTkLabel(
         parent,
-        text="Open in FSLeyes:",
+        text="Click the button to copy the following command and paste into your terminal to open in FSLeyes:",
         font=ctk.CTkFont(size=11, weight="bold"),
         anchor="w",
     )
@@ -80,6 +80,7 @@ def create_command_display(parent, command, row_start=0):
             path_label.bind("<Enter>", on_enter)
             path_label.bind("<Leave>", on_leave)
             path_label.bind("<Button-1>", lambda e, p=part: open_in_file_browser(p))
+
         else:
             # Non-clickable flag or text
             flag_label = ctk.CTkLabel(
@@ -99,6 +100,7 @@ def create_command_display(parent, command, row_start=0):
         width=40,
         height=35,
         corner_radius=0,
+        font=ctk.CTkFont(size=12),
         command=lambda: copy_to_clipboard(parent, command),
     )
     copy_button.grid(row=0, column=1, sticky="ns")
@@ -124,3 +126,179 @@ def open_in_file_browser(path):
     from lib.utils import open_in_file_browser as open_fb
 
     open_fb(path)
+
+
+def update_widgets_theme(widgets, widget_type: str = None):
+    """
+    Enhanced utility function to update theme for multiple widgets
+
+    Args:
+        widgets: List of widgets, single widget, or parent widget to traverse
+        widget_type: Type name like "CTkLabel", "CTkButton", "auto", or None
+                    - If "auto": automatically detect widget types
+                    - If None: traverse all children recursively
+                    - If specific type: only update widgets of that type
+
+    Examples:
+        # Update specific widgets of same type
+        update_widgets_theme([label1, label2, label3], "CTkLabel")
+
+        # Auto-detect and update mixed widget types
+        update_widgets_theme([label, button, entry], "auto")
+
+        # Recursively update all widgets in a container
+        update_widgets_theme(parent_frame, None)
+    """
+    theme = ctk.ThemeManager.theme
+    appearance_mode = ctk.get_appearance_mode()
+    is_dark = appearance_mode == "Dark"
+
+    # Helper to get theme color
+    def get_color(widget_type_name, property_name, default_light, default_dark):
+        try:
+            if widget_type_name in theme and property_name in theme[widget_type_name]:
+                value = theme[widget_type_name][property_name]
+                if isinstance(value, (list, tuple)) and len(value) >= 2:
+                    return value[1] if is_dark else value[0]
+                return value
+        except:
+            pass
+        return default_dark if is_dark else default_light
+
+    # Convert single widget to list
+    if not isinstance(widgets, list):
+        widgets = [widgets]
+
+    # If widget_type is None, recursively update all children
+    if widget_type is None:
+        for widget in widgets:
+            _update_widget_recursive(widget, theme, is_dark, get_color)
+        return
+
+    # Process each widget
+    for widget in widgets:
+        if not widget or not widget.winfo_exists():
+            continue
+
+        # Auto-detect widget type
+        if widget_type == "auto":
+            actual_type = widget.__class__.__name__
+        else:
+            actual_type = widget_type
+
+        try:
+            _update_widget_by_type(widget, actual_type, theme, is_dark, get_color)
+        except Exception as e:
+            # Silently continue if update fails
+            pass
+
+
+def _update_widget_by_type(widget, widget_type, theme, is_dark, get_color):
+    """Update a single widget based on its type"""
+
+    if not widget.winfo_exists():
+        return
+
+    # Get theme for this widget type
+    widget_theme = theme.get(widget_type, {})
+
+    # Common properties that most widgets support
+    if "fg_color" in widget_theme:
+        try:
+            widget.configure(fg_color=widget_theme["fg_color"])
+        except:
+            pass
+
+    if "text_color" in widget_theme:
+        try:
+            # Special check: don't update clickable paths (they stay blue)
+            if hasattr(widget, "cget"):
+                cursor = widget.cget("cursor")
+                if cursor == "hand2":  # Skip clickable paths
+                    return
+            widget.configure(text_color=widget_theme["text_color"])
+        except:
+            pass
+
+    if "border_color" in widget_theme:
+        try:
+            widget.configure(border_color=widget_theme["border_color"])
+        except:
+            pass
+
+    # Button-specific
+    if widget_type == "CTkButton":
+        if "hover_color" in widget_theme:
+            try:
+                widget.configure(hover_color=widget_theme["hover_color"])
+            except:
+                pass
+
+    # Entry-specific
+    if widget_type == "CTkEntry":
+        if "placeholder_text_color" in widget_theme:
+            try:
+                widget.configure(
+                    placeholder_text_color=widget_theme["placeholder_text_color"]
+                )
+            except:
+                pass
+
+    # TabView-specific
+    if widget_type == "CTkTabview":
+        try:
+            widget.configure(
+                fg_color=get_color("CTkFrame", "fg_color", "#FFFFFF", "#2B2B2B"),
+                border_color=get_color(
+                    "CTkFrame", "border_color", "#E0E0E0", "#3A3A3A"
+                ),
+                segmented_button_fg_color=get_color(
+                    "CTkSegmentedButton", "fg_color", "#E5E5EA", "#2C2C2E"
+                ),
+                segmented_button_selected_color=get_color(
+                    "CTkSegmentedButton", "selected_color", "#007AFF", "#0A84FF"
+                ),
+                segmented_button_selected_hover_color=get_color(
+                    "CTkSegmentedButton", "selected_hover_color", "#0051D5", "#409CFF"
+                ),
+                segmented_button_unselected_color=get_color(
+                    "CTkSegmentedButton", "unselected_color", "#E5E5EA", "#2C2C2E"
+                ),
+                segmented_button_unselected_hover_color=get_color(
+                    "CTkSegmentedButton", "unselected_hover_color", "#D1D1D6", "#3A3A3C"
+                ),
+                text_color=get_color("CTkLabel", "text_color", "#000000", "#FFFFFF"),
+            )
+        except:
+            pass
+
+    # RadioButton-specific
+    if widget_type == "CTkRadioButton":
+        if "hover_color" in widget_theme:
+            try:
+                widget.configure(hover_color=widget_theme["hover_color"])
+            except:
+                pass
+
+
+def _update_widget_recursive(widget, theme, is_dark, get_color):
+    """Recursively update a widget and all its children"""
+
+    if not widget or not widget.winfo_exists():
+        return
+
+    # Determine widget type
+    widget_class = widget.__class__.__name__
+
+    # Update this widget
+    try:
+        _update_widget_by_type(widget, widget_class, theme, is_dark, get_color)
+    except:
+        pass
+
+    # Recurse to children
+    try:
+        for child in widget.winfo_children():
+            _update_widget_recursive(child, theme, is_dark, get_color)
+    except:
+        pass

@@ -30,16 +30,6 @@ from lib.constants import (
 logger = logging.getLogger("disconnectome")
 
 
-def get_theme_names_from_folder(folder_path="themes"):
-    theme_files = []
-    if os.path.isdir(folder_path):
-        for f in os.listdir(folder_path):
-            if f.endswith(".json"):
-                # Add theme name without ".json"
-                theme_files.append(f[:-5])
-    return theme_files
-
-
 SETTINGS_FILE = "user_settings.json"
 
 

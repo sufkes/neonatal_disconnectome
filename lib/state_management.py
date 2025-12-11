@@ -6,8 +6,8 @@ for validation. It replaces the simple dictionary-based approach with
 type-safe, validated state containers.
 """
 
-from dataclasses import dataclass, field, asdict
-from typing import Optional, Dict, Any
+from dataclasses import dataclass, asdict
+from typing import Dict, Any
 from pathlib import Path
 from enum import Enum
 import json
@@ -39,7 +39,7 @@ class AppConfig:
     """Application configuration settings that persist across sessions"""
 
     runs_folder: str = ""
-    theme: str = "breeze"
+    theme: str = "blue"
     appearance: str = AppearanceMode.LIGHT.value
 
     def __post_init__(self):
@@ -271,7 +271,7 @@ class ProcessingState:
             return outputs
 
         # Import here to avoid circular imports
-        from lib.constants import TEMPLATE_SPACE, DISCONNECTOME, THUMBNAILS
+        from lib.constants import TEMPLATE_SPACE, DISCONNECTOME
 
         # Build actual output paths based on what's been completed
         if self.step1_completed and not self.lesion_already_warped:

@@ -8,14 +8,17 @@ from PIL import Image
 import os
 import threading
 
+from lib.gui_utils import update_widgets_theme
 from lib.makeThumbnails import plotThreeView
 from lib.constants import THUMBNAIL_BRAIN_IMAGE, THUMBNAILS_DIR
 from .loading_overlay import LoadingOverlay
+from lib.theme_manager import ThemeableFrame
 
 
-class WarpForm(ctk.CTkFrame):
+class WarpForm(ThemeableFrame):
     def __init__(self, master, go_back_callback=None, app=None):
-        super().__init__(master)
+        # Initialize with theme manager
+        super().__init__(master, theme_manager=app.theme_manager if app else None)
         self.go_back_callback = go_back_callback
         self.app = app
         self.state_manager = app.state_manager if app else None
@@ -33,14 +36,14 @@ class WarpForm(ctk.CTkFrame):
         row_index += 1
 
         # Image Data Section
-        self.image_data_label = ctk.CTkLabel(
+        image_data_label = ctk.CTkLabel(
             self.form_frame,
             text="Image Data",
             font=ctk.CTkFont(size=16, weight="bold"),
             padx=10,
             pady=10,
         )
-        self.image_data_label.grid(
+        image_data_label.grid(
             row=row_index, column=0, sticky="w", padx=20, pady=(0, 10)
         )
         row_index += 1
@@ -49,30 +52,28 @@ class WarpForm(ctk.CTkFrame):
         self.brain_image_path = ctk.StringVar()
         self.brain_image_error = ctk.StringVar()
 
-        self.brain_label = ctk.CTkLabel(
+        brain_label = ctk.CTkLabel(
             self.form_frame,
             text="Subject brain image in NIFTI format (.nii or .nii.gz):",
         )
-        self.brain_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(0, 5))
+        brain_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(0, 5))
         row_index += 1
 
-        self.brain_image_entry = ctk.CTkEntry(
+        brain_image_entry = ctk.CTkEntry(
             self.form_frame, textvariable=self.brain_image_path, state="readonly"
         )
-        self.brain_image_entry.grid(
-            row=row_index, column=0, sticky="ew", padx=(20, 110)
-        )
+        brain_image_entry.grid(row=row_index, column=0, sticky="ew", padx=(20, 110))
 
-        self.brain_browse_button = ctk.CTkButton(
+        brain_browse_button = ctk.CTkButton(
             self.form_frame, text="Browse...", command=self.browse_brain_image
         )
-        self.brain_browse_button.grid(row=row_index, column=1, sticky="w", padx=(0, 20))
+        brain_browse_button.grid(row=row_index, column=1, sticky="w", padx=(0, 20))
         row_index += 1
 
-        self.brain_image_error_label = ctk.CTkLabel(
+        brain_image_error_label = ctk.CTkLabel(
             self.form_frame, textvariable=self.brain_image_error, text_color="red"
         )
-        self.brain_image_error_label.grid(
+        brain_image_error_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(5, 10)
         )
         row_index += 1
@@ -101,34 +102,28 @@ class WarpForm(ctk.CTkFrame):
         self.lesion_mask_path = ctk.StringVar()
         self.lesion_mask_error = ctk.StringVar()
 
-        self.lesion_label = ctk.CTkLabel(
+        lesion_label = ctk.CTkLabel(
             self.form_frame,
             text="Subject brain lesion mask in NIFTI format (.nii or .nii.gz):",
         )
-        self.lesion_label.grid(
-            row=row_index, column=0, sticky="w", padx=20, pady=(0, 5)
-        )
+        lesion_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(0, 5))
         row_index += 1
 
-        self.lesion_mask_entry = ctk.CTkEntry(
+        lesion_mask_entry = ctk.CTkEntry(
             self.form_frame, textvariable=self.lesion_mask_path, state="readonly"
         )
-        self.lesion_mask_entry.grid(
-            row=row_index, column=0, sticky="ew", padx=(20, 110)
-        )
+        lesion_mask_entry.grid(row=row_index, column=0, sticky="ew", padx=(20, 110))
 
-        self.lesion_browse_button = ctk.CTkButton(
+        lesion_browse_button = ctk.CTkButton(
             self.form_frame, text="Browse...", command=self.browse_lesion_mask
         )
-        self.lesion_browse_button.grid(
-            row=row_index, column=1, sticky="w", padx=(0, 20)
-        )
+        lesion_browse_button.grid(row=row_index, column=1, sticky="w", padx=(0, 20))
         row_index += 1
 
-        self.lesion_mask_error_label = ctk.CTkLabel(
+        lesion_mask_error_label = ctk.CTkLabel(
             self.form_frame, textvariable=self.lesion_mask_error, text_color="red"
         )
-        self.lesion_mask_error_label.grid(
+        lesion_mask_error_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(5, 10)
         )
         row_index += 1
@@ -137,68 +132,62 @@ class WarpForm(ctk.CTkFrame):
         self.brain_type = ctk.StringVar()
         self.brain_type_error = ctk.StringVar()
 
-        self.type_label = ctk.CTkLabel(self.form_frame, text="Type of brain image:")
-        self.type_label.grid(
+        type_label = ctk.CTkLabel(self.form_frame, text="Type of brain image:")
+        type_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(10, 0)
         )
         row_index += 1
 
-        self.t1_radio_button = ctk.CTkRadioButton(
+        t1_radio_button = ctk.CTkRadioButton(
             self.form_frame, text="T1w", variable=self.brain_type, value="T1w"
         )
-        self.t2_radio_button = ctk.CTkRadioButton(
+        t2_radio_button = ctk.CTkRadioButton(
             self.form_frame, text="T2w", variable=self.brain_type, value="T2w"
         )
 
-        self.t1_radio_button.grid(row=row_index, column=0, padx=30, pady=2, sticky="w")
+        t1_radio_button.grid(row=row_index, column=0, padx=30, pady=2, sticky="w")
         row_index += 1
-        self.t2_radio_button.grid(row=row_index, column=0, padx=30, pady=2, sticky="w")
+        t2_radio_button.grid(row=row_index, column=0, padx=30, pady=2, sticky="w")
         row_index += 1
 
-        self.brain_type_error_label = ctk.CTkLabel(
+        brain_type_error_label = ctk.CTkLabel(
             self.form_frame, textvariable=self.brain_type_error, text_color="red"
         )
-        self.brain_type_error_label.grid(
+        brain_type_error_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20
         )
         row_index += 1
 
         # Subject Data Section
-        self.subject_label = ctk.CTkLabel(
+        subject_label = ctk.CTkLabel(
             self.form_frame,
             text="Subject data",
             font=ctk.CTkFont(size=16, weight="bold"),
         )
-        self.subject_label.grid(
-            row=row_index, column=0, sticky="w", padx=20, pady=(15, 10)
-        )
+        subject_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(15, 10))
         row_index += 1
 
         # Subject ID
         self.subject_id = ctk.StringVar()
         self.subject_id_error = ctk.StringVar()
 
-        self.subject_id_label = ctk.CTkLabel(
+        subject_id_label = ctk.CTkLabel(
             self.form_frame,
             text="Subject ID (letters, numbers, underscore, dash only):",
         )
-        self.subject_id_label.grid(
-            row=row_index, column=0, sticky="w", padx=20, pady=(0, 5)
-        )
+        subject_id_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(0, 5))
         row_index += 1
 
-        self.subject_id_entry = ctk.CTkEntry(
-            self.form_frame, textvariable=self.subject_id
-        )
-        self.subject_id_entry.grid(
+        subject_id_entry = ctk.CTkEntry(self.form_frame, textvariable=self.subject_id)
+        subject_id_entry.grid(
             row=row_index, column=0, columnspan=2, sticky="ew", padx=20
         )
         row_index += 1
 
-        self.subject_id_error_label = ctk.CTkLabel(
+        subject_id_error_label = ctk.CTkLabel(
             self.form_frame, textvariable=self.subject_id_error, text_color="red"
         )
-        self.subject_id_error_label.grid(
+        subject_id_error_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20
         )
         row_index += 1
@@ -207,43 +196,41 @@ class WarpForm(ctk.CTkFrame):
         self.gest_age = ctk.StringVar()
         self.gest_age_error = ctk.StringVar()
 
-        self.gest_label = ctk.CTkLabel(
+        gest_label = ctk.CTkLabel(
             self.form_frame, text="Subject's gestational age at scan time (weeks):"
         )
-        self.gest_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(10, 5))
+        gest_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(10, 5))
         row_index += 1
 
-        self.gest_entry = ctk.CTkEntry(self.form_frame, textvariable=self.gest_age)
-        self.gest_entry.grid(
-            row=row_index, column=0, columnspan=2, sticky="ew", padx=20
-        )
+        gest_entry = ctk.CTkEntry(self.form_frame, textvariable=self.gest_age)
+        gest_entry.grid(row=row_index, column=0, columnspan=2, sticky="ew", padx=20)
         row_index += 1
 
-        self.gest_age_error_label = ctk.CTkLabel(
+        gest_age_error_label = ctk.CTkLabel(
             self.form_frame, textvariable=self.gest_age_error, text_color="orange"
         )
-        self.gest_age_error_label.grid(
+        gest_age_error_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20
         )
         row_index += 1
 
         # Buttons
-        self.button_frame = ctk.CTkFrame(self.form_frame)
-        self.button_frame.grid(
+        button_frame = ctk.CTkFrame(self.form_frame)
+        button_frame.grid(
             row=row_index, column=0, columnspan=2, sticky="ew", padx=20, pady=20
         )
         row_index += 1
 
-        self.button_frame.grid_columnconfigure(0, weight=1)
-        self.button_frame.grid_columnconfigure(1, weight=1)
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
 
         self.back_button = ctk.CTkButton(
-            self.button_frame, text="Back", command=self.go_back
+            button_frame, text="Back", command=self.go_back
         )
         self.back_button.grid(row=0, column=0, sticky="w")
 
         self.next_button = ctk.CTkButton(
-            self.button_frame, text="Next", command=self.on_next
+            button_frame, text="Next", command=self.on_next
         )
         self.next_button.grid(row=0, column=1, sticky="e")
 
@@ -497,55 +484,11 @@ class WarpForm(ctk.CTkFrame):
         self._load_from_state()
 
     def update_theme(self):
-        """Update theme for all widgets"""
-        theme = ctk.ThemeManager.theme
+        """Update theme for all widgets in this form"""
+        super().update_theme()  # Update frame colors
 
-        self.configure(fg_color=theme["CTkFrame"]["fg_color"])
+        update_widgets_theme(self, None)
 
-        # Update labels
-        label_fg = theme["CTkLabel"]["text_color"]
-        for lbl in [
-            self.image_data_label,
-            self.brain_label,
-            self.lesion_label,
-            self.type_label,
-            self.subject_label,
-            self.subject_id_label,
-            self.gest_label,
-            self.caption_label,
-        ]:
-            lbl.configure(text_color=label_fg)
-
-        # Update entries
-        entry_theme = theme["CTkEntry"]
-        for entry in [
-            self.brain_image_entry,
-            self.lesion_mask_entry,
-            self.subject_id_entry,
-            self.gest_entry,
-        ]:
-            entry.configure(
-                fg_color=entry_theme["fg_color"],
-                text_color=entry_theme["text_color"],
-                border_color=entry_theme["border_color"],
-            )
-
-        # Update buttons
-        button_theme = theme["CTkButton"]
-        for btn in [
-            self.back_button,
-            self.next_button,
-            self.brain_browse_button,
-            self.lesion_browse_button,
-        ]:
-            if btn.winfo_exists():
-                btn.configure(
-                    fg_color=button_theme["fg_color"],
-                    hover_color=button_theme["hover_color"],
-                    text_color=button_theme["text_color"],
-                )
-
-        # Update radio buttons
-        radio_theme = theme["CTkRadioButton"]
-        for rb in [self.t1_radio_button, self.t2_radio_button]:
-            rb.configure(text_color=radio_theme["text_color"])
+        # Update loading overlay
+        if hasattr(self, "loading_overlay"):
+            self.loading_overlay.update_theme()

@@ -10,12 +10,16 @@ import customtkinter as ctk
 from tkinter import filedialog
 import threading
 
+from lib.gui_utils import update_widgets_theme
+
 from .loading_overlay import LoadingOverlay
+from lib.theme_manager import ThemeableFrame
 
 
-class WarpedLesionForm(ctk.CTkFrame):
+class WarpedLesionForm(ThemeableFrame):
     def __init__(self, master, go_back_callback=None, app=None):
-        super().__init__(master)
+        # Initialize with theme manager
+        super().__init__(master, theme_manager=app.theme_manager if app else None)
         self.go_back_callback = go_back_callback
         self.app = app
         self.state_manager = app.state_manager if app else None
@@ -27,48 +31,46 @@ class WarpedLesionForm(ctk.CTkFrame):
         row_index = 0
 
         # Main form frame
-        self.form_frame = ctk.CTkFrame(self, corner_radius=0)
-        self.form_frame.grid(row=row_index, column=0, sticky="ew", padx=10, pady=10)
-        self.form_frame.grid_columnconfigure(0, weight=1)
+        form_frame = ctk.CTkFrame(self, corner_radius=0)
+        form_frame.grid(row=row_index, column=0, sticky="ew", padx=10, pady=10)
+        form_frame.grid_columnconfigure(0, weight=1)
 
         row_index += 1
 
         # Header with info message
-        self.header_label = ctk.CTkLabel(
-            self.form_frame,
+        header_label = ctk.CTkLabel(
+            form_frame,
             text="Pre-Warped Lesion Processing",
             font=ctk.CTkFont(size=20, weight="bold"),
             padx=10,
             pady=10,
         )
-        self.header_label.grid(
-            row=row_index, column=0, sticky="w", padx=20, pady=(10, 5)
-        )
+        header_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(10, 5))
         row_index += 1
 
         info_text = (
             "You indicated that your lesion mask is already warped to a dHCP template. "
             "Please provide the warped lesion mask and subject information below."
         )
-        self.info_label = ctk.CTkLabel(
-            self.form_frame,
+        info_label = ctk.CTkLabel(
+            form_frame,
             text=info_text,
             wraplength=580,
             justify="left",
             font=ctk.CTkFont(size=12),
         )
-        self.info_label.grid(
+        info_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(0, 20)
         )
         row_index += 1
 
         # Lesion Mask Section
-        self.lesion_section_label = ctk.CTkLabel(
-            self.form_frame,
+        lesion_section_label = ctk.CTkLabel(
+            form_frame,
             text="Lesion Data",
             font=ctk.CTkFont(size=16, weight="bold"),
         )
-        self.lesion_section_label.grid(
+        lesion_section_label.grid(
             row=row_index, column=0, sticky="w", padx=20, pady=(10, 10)
         )
         row_index += 1
@@ -77,32 +79,26 @@ class WarpedLesionForm(ctk.CTkFrame):
         self.lesion_mask_path = ctk.StringVar()
         self.lesion_mask_error = ctk.StringVar()
 
-        self.lesion_label = ctk.CTkLabel(
-            self.form_frame,
+        lesion_label = ctk.CTkLabel(
+            form_frame,
             text="Warped lesion mask in NIFTI format (.nii or .nii.gz):",
         )
-        self.lesion_label.grid(
-            row=row_index, column=0, sticky="w", padx=20, pady=(0, 5)
-        )
+        lesion_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(0, 5))
         row_index += 1
 
-        self.lesion_mask_entry = ctk.CTkEntry(
-            self.form_frame, textvariable=self.lesion_mask_path, state="readonly"
+        lesion_mask_entry = ctk.CTkEntry(
+            form_frame, textvariable=self.lesion_mask_path, state="readonly"
         )
-        self.lesion_mask_entry.grid(
-            row=row_index, column=0, sticky="ew", padx=(20, 110)
-        )
+        lesion_mask_entry.grid(row=row_index, column=0, sticky="ew", padx=(20, 110))
 
-        self.lesion_browse_button = ctk.CTkButton(
-            self.form_frame, text="Browse...", command=self.browse_lesion_mask
+        lesion_browse_button = ctk.CTkButton(
+            form_frame, text="Browse...", command=self.browse_lesion_mask
         )
-        self.lesion_browse_button.grid(
-            row=row_index, column=1, sticky="w", padx=(0, 20)
-        )
+        lesion_browse_button.grid(row=row_index, column=1, sticky="w", padx=(0, 20))
         row_index += 1
 
         self.lesion_mask_error_label = ctk.CTkLabel(
-            self.form_frame, textvariable=self.lesion_mask_error, text_color="red"
+            form_frame, textvariable=self.lesion_mask_error, text_color="red"
         )
         self.lesion_mask_error_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(5, 10)
@@ -110,11 +106,11 @@ class WarpedLesionForm(ctk.CTkFrame):
         row_index += 1
 
         # Template Age Info
-        self.template_age_label = ctk.CTkLabel(
-            self.form_frame,
+        template_age_label = ctk.CTkLabel(
+            form_frame,
             text="Age of dHCP template image to which lesion mask is warped, in weeks:",
         )
-        self.template_age_label.grid(
+        template_age_label.grid(
             row=row_index, column=0, sticky="w", padx=20, pady=(10, 5)
         )
         row_index += 1
@@ -122,20 +118,20 @@ class WarpedLesionForm(ctk.CTkFrame):
         self.template_age = ctk.StringVar()
         self.template_age_error = ctk.StringVar()
 
-        self.template_age_entry = ctk.CTkEntry(
-            self.form_frame,
+        template_age_entry = ctk.CTkEntry(
+            form_frame,
             textvariable=self.template_age,
             placeholder_text="e.g., 32, 36, 40",
         )
-        self.template_age_entry.grid(
+        template_age_entry.grid(
             row=row_index, column=0, columnspan=2, sticky="ew", padx=20
         )
         row_index += 1
 
-        self.template_age_error_label = ctk.CTkLabel(
-            self.form_frame, textvariable=self.template_age_error, text_color="orange"
+        template_age_error_label = ctk.CTkLabel(
+            form_frame, textvariable=self.template_age_error, text_color="orange"
         )
-        self.template_age_error_label.grid(
+        template_age_error_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(5, 10)
         )
         row_index += 1
@@ -144,39 +140,39 @@ class WarpedLesionForm(ctk.CTkFrame):
         self.brain_type = ctk.StringVar()
         self.brain_type_error = ctk.StringVar()
 
-        self.type_label = ctk.CTkLabel(self.form_frame, text="Type of brain image:")
-        self.type_label.grid(
+        type_label = ctk.CTkLabel(form_frame, text="Type of brain image:")
+        type_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(10, 0)
         )
         row_index += 1
 
-        self.t1_radio_button = ctk.CTkRadioButton(
-            self.form_frame, text="T1w", variable=self.brain_type, value="T1w"
+        t1_radio_button = ctk.CTkRadioButton(
+            form_frame, text="T1w", variable=self.brain_type, value="T1w"
         )
-        self.t2_radio_button = ctk.CTkRadioButton(
-            self.form_frame, text="T2w", variable=self.brain_type, value="T2w"
+        t2_radio_button = ctk.CTkRadioButton(
+            form_frame, text="T2w", variable=self.brain_type, value="T2w"
         )
 
-        self.t1_radio_button.grid(row=row_index, column=0, padx=30, pady=2, sticky="w")
+        t1_radio_button.grid(row=row_index, column=0, padx=30, pady=2, sticky="w")
         row_index += 1
-        self.t2_radio_button.grid(row=row_index, column=0, padx=30, pady=2, sticky="w")
+        t2_radio_button.grid(row=row_index, column=0, padx=30, pady=2, sticky="w")
         row_index += 1
 
-        self.brain_type_error_label = ctk.CTkLabel(
-            self.form_frame, textvariable=self.brain_type_error, text_color="red"
+        brain_type_error_label = ctk.CTkLabel(
+            form_frame, textvariable=self.brain_type_error, text_color="red"
         )
-        self.brain_type_error_label.grid(
+        brain_type_error_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20
         )
         row_index += 1
 
         # Subject Data Section
-        self.subject_section_label = ctk.CTkLabel(
-            self.form_frame,
+        subject_section_label = ctk.CTkLabel(
+            form_frame,
             text="Subject Data",
             font=ctk.CTkFont(size=16, weight="bold"),
         )
-        self.subject_section_label.grid(
+        subject_section_label.grid(
             row=row_index, column=0, sticky="w", padx=20, pady=(15, 10)
         )
         row_index += 1
@@ -185,62 +181,58 @@ class WarpedLesionForm(ctk.CTkFrame):
         self.subject_id = ctk.StringVar()
         self.subject_id_error = ctk.StringVar()
 
-        self.subject_id_label = ctk.CTkLabel(
-            self.form_frame,
+        subject_id_label = ctk.CTkLabel(
+            form_frame,
             text="Subject ID (letters, numbers, underscore, dash only):",
         )
-        self.subject_id_label.grid(
-            row=row_index, column=0, sticky="w", padx=20, pady=(0, 5)
-        )
+        subject_id_label.grid(row=row_index, column=0, sticky="w", padx=20, pady=(0, 5))
         row_index += 1
 
-        self.subject_id_entry = ctk.CTkEntry(
-            self.form_frame, textvariable=self.subject_id
-        )
-        self.subject_id_entry.grid(
+        subject_id_entry = ctk.CTkEntry(form_frame, textvariable=self.subject_id)
+        subject_id_entry.grid(
             row=row_index, column=0, columnspan=2, sticky="ew", padx=20
         )
         row_index += 1
 
-        self.subject_id_error_label = ctk.CTkLabel(
-            self.form_frame, textvariable=self.subject_id_error, text_color="red"
+        subject_id_error_label = ctk.CTkLabel(
+            form_frame, textvariable=self.subject_id_error, text_color="red"
         )
-        self.subject_id_error_label.grid(
+        subject_id_error_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20
         )
         row_index += 1
 
         # Additional Info
-        self.note_label = ctk.CTkLabel(
-            self.form_frame,
+        note_label = ctk.CTkLabel(
+            form_frame,
             text="Note: Since your lesion is pre-warped, we will skip the initial warping step and proceed directly to disconnectome generation.",
             wraplength=580,
             justify="left",
             font=ctk.CTkFont(size=11, slant="italic"),
             text_color="gray",
         )
-        self.note_label.grid(
+        note_label.grid(
             row=row_index, column=0, columnspan=2, sticky="w", padx=20, pady=(20, 10)
         )
         row_index += 1
 
         # Buttons
-        self.button_frame = ctk.CTkFrame(self.form_frame)
-        self.button_frame.grid(
+        button_frame = ctk.CTkFrame(form_frame)
+        button_frame.grid(
             row=row_index, column=0, columnspan=2, sticky="ew", padx=20, pady=20
         )
         row_index += 1
 
-        self.button_frame.grid_columnconfigure(0, weight=1)
-        self.button_frame.grid_columnconfigure(1, weight=1)
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
 
         self.back_button = ctk.CTkButton(
-            self.button_frame, text="Back", command=self.go_back
+            button_frame, text="Back", command=self.go_back
         )
         self.back_button.grid(row=0, column=0, sticky="w")
 
         self.next_button = ctk.CTkButton(
-            self.button_frame, text="Next", command=self.on_next
+            button_frame, text="Next", command=self.on_next
         )
         self.next_button.grid(row=0, column=1, sticky="e")
 
@@ -263,7 +255,7 @@ class WarpedLesionForm(ctk.CTkFrame):
     def browse_lesion_mask(self):
         """Browse for lesion mask file"""
         path = filedialog.askopenfilename(
-            filetypes=[("NIFTI files", "*.nii"), ("NIFTI files", "*.nii.gz")]
+            # filetypes=[("NIFTI files", "*.nii"), ("NIFTI files", "*.nii.gz")]
         )
 
         if path:
@@ -438,46 +430,11 @@ class WarpedLesionForm(ctk.CTkFrame):
             self.go_back_callback()
 
     def update_theme(self):
-        """Update theme for all widgets"""
-        theme = ctk.ThemeManager.theme
+        """Update theme for all widgets in this form"""
+        super().update_theme()  # Update frame colors
 
-        self.configure(fg_color=theme["CTkFrame"]["fg_color"])
-        self.form_frame.configure(fg_color=theme["CTkFrame"]["fg_color"])
+        update_widgets_theme(self, None)
 
-        # Update labels
-        label_fg = theme["CTkLabel"]["text_color"]
-        for lbl in [
-            self.header_label,
-            self.info_label,
-            self.lesion_section_label,
-            self.lesion_label,
-            self.template_age_label,
-            self.subject_section_label,
-            self.subject_id_label,
-            self.note_label,
-        ]:
-            if lbl.winfo_exists():
-                lbl.configure(text_color=label_fg)
-
-        # Update entries
-        entry_theme = theme["CTkEntry"]
-        for entry in [
-            self.lesion_mask_entry,
-            self.template_age_entry,
-            self.subject_id_entry,
-        ]:
-            entry.configure(
-                fg_color=entry_theme["fg_color"],
-                text_color=entry_theme["text_color"],
-                border_color=entry_theme["border_color"],
-            )
-
-        # Update buttons
-        button_theme = theme["CTkButton"]
-        for btn in [self.back_button, self.next_button, self.lesion_browse_button]:
-            if btn.winfo_exists():
-                btn.configure(
-                    fg_color=button_theme["fg_color"],
-                    hover_color=button_theme["hover_color"],
-                    text_color=button_theme["text_color"],
-                )
+        # Update loading overlay
+        if hasattr(self, "loading_overlay"):
+            self.loading_overlay.update_theme()

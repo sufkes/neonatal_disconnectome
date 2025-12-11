@@ -1,17 +1,17 @@
 import os
-from pathlib import Path
 import customtkinter as ctk
-from tkinter import messagebox
 from PIL import Image
 
 from lib.constants import THUMBNAIL_DISCONNECTOME, THUMBNAILS, TEMPLATE_DIR
-from lib.utils import open_in_file_browser
-from lib.gui_utils import create_command_display
+from lib.gui_utils import create_command_display, update_widgets_theme
+
+from lib.theme_manager import ThemeableFrame
 
 
-class FinalResult(ctk.CTkFrame):
+class FinalResult(ThemeableFrame):
     def __init__(self, master, go_back_callback=None, app=None):
-        super().__init__(master)
+        # Initialize with theme manager
+        super().__init__(master, theme_manager=app.theme_manager if app else None)
         self.go_back_callback = go_back_callback
         self.app = app  # store app reference
         self.state_manager = app.state_manager if app else None
@@ -21,39 +21,45 @@ class FinalResult(ctk.CTkFrame):
 
         # Title with success label
         title_frame = ctk.CTkFrame(self)
-        title_frame.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="w")
-        title_frame.grid_columnconfigure((0, 1), weight=0)
+        title_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        title_frame.grid_columnconfigure(0, weight=1)
+        title_frame.grid_columnconfigure(1, weight=0)
 
         title_label = ctk.CTkLabel(
             title_frame,
             text="Generated Disconnectome ",
             font=ctk.CTkFont(size=20, weight="bold"),
+            padx=10,
+            pady=10,
         )
-        title_label.grid(row=0, column=0, sticky="w", padx=(0, 5))
+        title_label.grid(row=0, column=0, sticky="w", padx=(10, 5), pady=5)
 
         success_label = ctk.CTkLabel(
             title_frame,
             text="Success",
             text_color="green",
-            font=ctk.CTkFont(size=18, weight="bold"),
+            font=ctk.CTkFont(weight="bold"),
+            padx=10,
+            pady=10,
         )
-        success_label.grid(row=0, column=1, sticky="w")
+        success_label.grid(row=0, column=1, sticky="w", padx=(5, 10), pady=5)
 
         # Figure with image and caption
-        self.figure_frame = ctk.CTkFrame(self)
-        self.figure_frame.grid(row=1, column=0, padx=20, pady=(0, 10), sticky="ew")
-        self.figure_frame.grid_columnconfigure(0, weight=1)
+        figure_frame = ctk.CTkFrame(self)
+        figure_frame.grid(row=1, column=0, padx=20, pady=(0, 10), sticky="ew")
+        figure_frame.grid_columnconfigure(0, weight=1)
 
-        self.image_label = ctk.CTkLabel(self.figure_frame, text="Loading image...")
+        self.image_label = ctk.CTkLabel(figure_frame, text="Loading image...")
         self.image_label.grid(row=0, column=0, sticky="nsew")
 
-        self.caption_label = ctk.CTkLabel(
-            self.figure_frame,
+        caption_label = ctk.CTkLabel(
+            figure_frame,
             text="Image showing Disconnectome map overlaid on the 40w template, and the lesion map warped to the 40w template",
-            wraplength=580,
+            wraplength=500,
             justify="center",
+            font=ctk.CTkFont(size=10),  # Smaller font
         )
-        self.caption_label.grid(row=1, column=0, pady=(5, 0), sticky="w")
+        caption_label.grid(row=1, column=0, pady=(0, 10), sticky="ew", padx=10)
 
         # Load existing state if available
         self._load_from_state()
@@ -169,19 +175,8 @@ class FinalResult(ctk.CTkFrame):
                 self.app.logger.error(f"Failed to load thumbnail: {e}", exc_info=True)
             self.image_label.configure(text=f"Error loading image:\n{str(e)}")
 
-    def copy_to_clipboard(self, text):
-        try:
-            self.clipboard_clear()
-            self.clipboard_append(text)
-            self.update()
+    def update_theme(self):
+        """Update theme for all widgets in this form"""
+        super().update_theme()  # Update frame colors
 
-            if hasattr(self, "app") and hasattr(self.app, "logger"):
-                self.app.logger.info(f"Copied command to clipboard: {text}")
-
-            messagebox.showinfo("Copied", "Command copied to clipboard.")
-        except Exception as e:
-            if hasattr(self, "app") and hasattr(self.app, "logger"):
-                self.app.logger.error(
-                    f"Failed to copy to clipboard: {e}", exc_info=True
-                )
-            messagebox.showwarning("Clipboard error", f"Copying failed: {e}")
+        update_widgets_theme(self, None)

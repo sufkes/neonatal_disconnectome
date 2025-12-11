@@ -1,18 +1,19 @@
 import os
-from pathlib import Path
 import threading
 import customtkinter as ctk
-from tkinter import messagebox
 from PIL import Image
 
 from lib.constants import TEMPLATE_DIR, THUMBNAILS
-from lib.utils import getRoundedAge, open_in_file_browser
+from lib.gui_utils import update_widgets_theme
+from lib.utils import getRoundedAge
+from lib.theme_manager import ThemeableFrame
 from .loading_overlay import LoadingOverlay
 
 
-class DisconnectomeForm(ctk.CTkFrame):
+class DisconnectomeForm(ThemeableFrame):
     def __init__(self, master, go_back_callback=None, app=None):
-        super().__init__(master)
+        # Initialize with theme manager
+        super().__init__(master, theme_manager=app.theme_manager if app else None)
         self.go_back_callback = go_back_callback
         self.app = app  # store app reference
         self.state_manager = app.state_manager if app else None
@@ -219,29 +220,6 @@ class DisconnectomeForm(ctk.CTkFrame):
 
         create_command_display(parent, copy_command, row_start=current_row)
 
-    def copy_to_clipboard(self, text):
-        try:
-            # Use CustomTkinter/Tk native clipboard calls
-            self.clipboard_clear()
-            self.clipboard_append(text)
-            self.update()  # Force clipboard update
-
-            # Log success assuming self.app.logger exists and is configured
-            if hasattr(self, "app") and hasattr(self.app, "logger"):
-                self.app.logger.info(f"Copied command to clipboard: {text}")
-
-            # Show info popup
-            messagebox.showinfo("Copied", "Command copied to clipboard.")
-        except Exception as e:
-            # Log error
-            if hasattr(self, "app") and hasattr(self.app, "logger"):
-                self.app.logger.error(
-                    f"Failed to copy to clipboard: {e}", exc_info=True
-                )
-
-            # Show warning popup
-            messagebox.showwarning("Clipboard error", f"Copying failed: {e}")
-
     def on_next(self):
         if hasattr(self.app, "show_final_result"):
             self.next_button.configure(state="disabled")
@@ -332,3 +310,13 @@ class DisconnectomeForm(ctk.CTkFrame):
     def go_back(self):
         if self.go_back_callback:
             self.go_back_callback()
+
+    def update_theme(self):
+        """Update theme for all widgets in this form"""
+        super().update_theme()  # Update frame colors
+
+        update_widgets_theme(self, None)
+
+        # Update loading overlay
+        if hasattr(self, "loading_overlay"):
+            self.loading_overlay.update_theme()
