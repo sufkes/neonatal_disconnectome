@@ -1,16 +1,16 @@
 # ===================================================================
 # FILE 4: convert_icon.py
 # ===================================================================
-# Script to convert PNG logo to Windows .ico and macOS .icns
+# Script to convert PNG icon to Windows .ico and macOS .icns
 
 from PIL import Image
 import os
 import subprocess
 
-print("Converting logo to platform-specific icon formats...")
+print("Converting icon to platform-specific icon formats...")
 
-# Input logo
-logo_path = "./logo.png"
+# Input icon
+logo_path = "./app_icon.png"
 
 if not os.path.exists(logo_path):
     print(f"ERROR: {logo_path} not found!")
@@ -21,7 +21,7 @@ img = Image.open(logo_path)
 
 # === Windows .ico ===
 print("Creating Windows .ico...")
-ico_path = "logo.ico"
+ico_path = "icon.ico"
 img.save(
     ico_path,
     format="ICO",
@@ -35,7 +35,7 @@ print("Creating macOS .icns...")
 # Check if on macOS (iconutil available)
 if os.system("which iconutil > /dev/null 2>&1") == 0:
     # Create iconset directory
-    iconset_dir = "logo.iconset"
+    iconset_dir = "icon.iconset"
     os.makedirs(iconset_dir, exist_ok=True)
 
     # Generate all required sizes
@@ -57,14 +57,14 @@ if os.system("which iconutil > /dev/null 2>&1") == 0:
         resized.save(os.path.join(iconset_dir, filename))
 
     # Convert to .icns
-    subprocess.run(["iconutil", "-c", "icns", iconset_dir, "-o", "logo.icns"])
+    subprocess.run(["iconutil", "-c", "icns", iconset_dir, "-o", "icon.icns"])
 
     # Clean up
     import shutil
 
     shutil.rmtree(iconset_dir)
 
-    print(f"✓ Created logo.icns")
+    print(f"✓ Created icon.icns")
 else:
     print("⚠ iconutil not available (macOS only), skipping .icns creation")
     print("  You can create .icns manually on macOS or use online converters")

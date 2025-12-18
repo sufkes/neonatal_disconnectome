@@ -92,7 +92,7 @@ class WarpForm(ThemeableFrame):
         self.caption_label = ctk.CTkLabel(
             self.form_frame,
             text=caption_text,
-            font=ctk.CTkFont(size=11),
+            font=ctk.CTkFont(size=12),
             justify="center",
             anchor="center",
         )
@@ -473,15 +473,6 @@ class WarpForm(ThemeableFrame):
         self._save_to_state()
         if self.go_back_callback:
             self.go_back_callback()
-
-    # DEPRECATED: Keep for backward compatibility
-    def save_data(self, app_data):
-        """DEPRECATED: Use state_manager instead"""
-        self._save_to_state()
-
-    def load_data(self, app_data):
-        """DEPRECATED: Use state_manager instead"""
-        self._load_from_state()
 
     def update_theme(self):
         """Update theme for all widgets in this form"""

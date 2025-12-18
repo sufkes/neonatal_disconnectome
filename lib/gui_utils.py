@@ -20,7 +20,7 @@ def create_command_display(parent, command, row_start=0):
     instruction_label = ctk.CTkLabel(
         parent,
         text="Click the button to copy the following command and paste into your terminal to open in FSLeyes:",
-        font=ctk.CTkFont(size=11, weight="bold"),
+        font=ctk.CTkFont(size=12, weight="bold"),
         anchor="w",
     )
     instruction_label.grid(row=row_start, column=0, sticky="w", padx=5, pady=(5, 2))
@@ -50,7 +50,7 @@ def create_command_display(parent, command, row_start=0):
     base_label = ctk.CTkLabel(
         command_scroll,
         text=base_command + " ",
-        font=ctk.CTkFont(family="Courier", size=10),
+        font=ctk.CTkFont(family="Verdana", size=12),
         anchor="w",
     )
     base_label.grid(row=0, column=0, sticky="w", padx=(5, 0))
@@ -63,7 +63,7 @@ def create_command_display(parent, command, row_start=0):
             path_label = ctk.CTkLabel(
                 command_scroll,
                 text=part + " ",
-                font=ctk.CTkFont(family="Courier", size=10),
+                font=ctk.CTkFont(family="Verdana", size=12),
                 text_color="#0074d9",
                 cursor="hand2",
                 anchor="w",
@@ -86,7 +86,7 @@ def create_command_display(parent, command, row_start=0):
             flag_label = ctk.CTkLabel(
                 command_scroll,
                 text=part + " ",
-                font=ctk.CTkFont(family="Courier", size=10),
+                font=ctk.CTkFont(family="Verdana", size=12),
                 anchor="w",
             )
             flag_label.grid(row=0, column=col, sticky="w", padx=(0, 2))

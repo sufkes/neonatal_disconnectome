@@ -208,7 +208,7 @@ class DisconnectomeForm(ThemeableFrame):
             text=caption,
             wraplength=500,  # Slightly narrower
             justify="center",
-            font=ctk.CTkFont(size=10),  # Smaller font
+            font=ctk.CTkFont(size=12),  # Smaller font
         )
         caption_label.grid(
             row=current_row, column=0, pady=(0, 10), sticky="ew", padx=10

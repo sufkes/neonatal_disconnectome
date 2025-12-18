@@ -80,7 +80,7 @@ class DataDownloadDialog(ctk.CTkToplevel):
         self.progress_bar.set(0)
 
         self.progress_text = ctk.CTkLabel(
-            self.progress_frame, text="", font=ctk.CTkFont(size=10)
+            self.progress_frame, text="", font=ctk.CTkFont(size=12)
         )
         self.progress_text.pack(pady=(0, 10))
 

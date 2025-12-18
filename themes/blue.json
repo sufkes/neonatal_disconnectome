@@ -351,12 +351,12 @@
   },
   "CTkFont": {
     "macOS": {
-      "family": "SF Pro Text",
+      "family": "Verdana",
       "size": 13,
       "weight": "normal"
     },
     "Windows": {
-      "family": "Segoe UI",
+      "family": "Verdana",
       "size": 13,
       "weight": "normal"
     },

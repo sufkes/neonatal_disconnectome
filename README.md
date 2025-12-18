@@ -167,19 +167,19 @@ pip install pyinstaller
 python convert_icon.py
 
 # Option 2: Manual creation with sips (macOS native)
-mkdir logo.iconset
-sips -z 16 16     logo.png --out logo.iconset/icon_16x16.png
-sips -z 32 32     logo.png --out logo.iconset/icon_16x16@2x.png
-sips -z 32 32     logo.png --out logo.iconset/icon_32x32.png
-sips -z 64 64     logo.png --out logo.iconset/icon_32x32@2x.png
-sips -z 128 128   logo.png --out logo.iconset/icon_128x128.png
-sips -z 256 256   logo.png --out logo.iconset/icon_128x128@2x.png
-sips -z 256 256   logo.png --out logo.iconset/icon_256x256.png
-sips -z 512 512   logo.png --out logo.iconset/icon_256x256@2x.png
-sips -z 512 512   logo.png --out logo.iconset/icon_512x512.png
-sips -z 1024 1024 logo.png --out logo.iconset/icon_512x512@2x.png
-iconutil -c icns logo.iconset
-rm -rf logo.iconset
+mkdir icon.iconset
+sips -z 16 16     app_icon.png --out icon.iconset/icon_16x16.png
+sips -z 32 32     app_icon.png --out icon.iconset/icon_16x16@2x.png
+sips -z 32 32     app_icon.png --out icon.iconset/icon_32x32.png
+sips -z 64 64     app_icon.png --out icon.iconset/icon_32x32@2x.png
+sips -z 128 128   app_icon.png --out icon.iconset/icon_128x128.png
+sips -z 256 256   app_icon.png --out icon.iconset/icon_128x128@2x.png
+sips -z 256 256   app_icon.png --out icon.iconset/icon_256x256.png
+sips -z 512 512   app_icon.png --out icon.iconset/icon_256x256@2x.png
+sips -z 512 512   app_icon.png --out icon.iconset/icon_512x512.png
+sips -z 1024 1024 app_icon.png --out icon.iconset/icon_512x512@2x.png
+iconutil -c icns icon.iconset
+rm -rf icon.iconset
 ```
 
 #### Step 3: Build Application
@@ -278,7 +278,7 @@ pip install pyinstaller
 python convert_icon.py
 
 # Option 2: Manual creation with ImageMagick (if installed)
-magick convert logo.png -define icon:auto-resize=256,128,64,48,32,16 logo.ico
+magick convert app_icon.png -define icon:auto-resize=256,128,64,48,32,16 icon.ico
 ```
 
 #### Step 3: Build Application
@@ -592,13 +592,15 @@ disconnectome/
 │   └── macos_graphite.json
 ├── requirements.txt            # Python dependencies
 ├── Disconnectome.spec          # PyInstaller specification
-├── logo.png                    # Logo for the application
-├── convert_icon.py             # Script to convert PNG logo
+├── app_icon.png                # Logo for the application
+├── convert_icon.py             # Script to convert PNG icon
 ├── build_macos.sh              # macOS build script
 ├── build_windows.bat           # Windows build script
 ├── build_linux.sh              # Linux build script
 └── README.md                   # This file
 ```
+
+[icon source](https://www.freepik.com/icon/brain_5015667#fromView=keyword&page=1&position=12&uuid=cef2547b-fd43-4e93-9ded-3158650c666b)
 
 ### Adding New Themes
 

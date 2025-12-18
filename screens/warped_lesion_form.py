@@ -208,7 +208,7 @@ class WarpedLesionForm(ThemeableFrame):
             text="Note: Since your lesion is pre-warped, we will skip the initial warping step and proceed directly to disconnectome generation.",
             wraplength=580,
             justify="left",
-            font=ctk.CTkFont(size=11, slant="italic"),
+            font=ctk.CTkFont(size=12, slant="italic"),
             text_color="gray",
         )
         note_label.grid(

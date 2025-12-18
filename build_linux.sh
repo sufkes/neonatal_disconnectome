@@ -108,24 +108,24 @@ check_data_size() {
 
 # Create icon if it doesn't exist
 create_icon() {
-    if [ ! -f "logo.png" ]; then
-        print_warning "logo.png not found. Icon will not be included."
+    if [ ! -f "app_icon.png" ]; then
+        print_warning "app_icon.png not found. Icon will not be included."
         return
     fi
 
     # For Linux, PNG is usually sufficient
     # But we can create different sizes for better appearance
     if command -v convert &> /dev/null; then
-        print_status "Creating icon sizes from logo.png..."
+        print_status "Creating icon sizes from app_icon.png..."
 
         mkdir -p icons
         for size in 16 32 48 64 128 256; do
-            convert logo.png -resize ${size}x${size} icons/logo_${size}.png 2>/dev/null || true
+            convert app_icon.png -resize ${size}x${size} icons/logo_${size}.png 2>/dev/null || true
         done
 
         print_status "Icons created in icons/ directory"
     else
-        print_warning "ImageMagick not installed. Using logo.png as-is."
+        print_warning "ImageMagick not installed. Using app_icon.png as-is."
         print_warning "Install for better icons: sudo apt-get install imagemagick"
     fi
 }
@@ -172,7 +172,7 @@ Type=Application
 Name=Disconnectome
 Comment=Brain disconnectome analysis tool
 Exec=$(pwd)/dist/Disconnectome/Disconnectome
-Icon=$(pwd)/dist/Disconnectome/logo.png
+Icon=$(pwd)/dist/Disconnectome/app_icon.png
 Terminal=false
 Categories=Science;Education;MedicalSoftware;
 EOF
@@ -229,9 +229,9 @@ create_appimage() {
     cp -r dist/Disconnectome/* "$APP_DIR/usr/bin/"
 
     # Copy icon
-    if [ -f "logo.png" ]; then
-        cp logo.png "$APP_DIR/usr/share/icons/hicolor/256x256/apps/disconnectome.png"
-        cp logo.png "$APP_DIR/disconnectome.png"
+    if [ -f "app_icon.png" ]; then
+        cp app_icon.png "$APP_DIR/usr/share/icons/hicolor/256x256/apps/disconnectome.png"
+        cp app_icon.png "$APP_DIR/disconnectome.png"
     fi
 
     # Create desktop file
@@ -310,8 +310,8 @@ EOF
     chmod +x "$PKG_DIR/usr/bin/disconnectome"
 
     # Copy icon
-    if [ -f "logo.png" ]; then
-        cp logo.png "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/disconnectome.png"
+    if [ -f "app_icon.png" ]; then
+        cp app_icon.png "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/disconnectome.png"
     fi
 
     # Create desktop file

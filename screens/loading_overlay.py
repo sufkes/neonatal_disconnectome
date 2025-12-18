@@ -31,7 +31,7 @@ class LoadingOverlay(ctk.CTkFrame):
 
         # Detail label for substep info
         self.detail_label = ctk.CTkLabel(
-            self.content_frame, text="", font=ctk.CTkFont(size=11)
+            self.content_frame, text="", font=ctk.CTkFont(size=12)
         )
         self.detail_label.grid(row=2, column=0, pady=(5, 0))
 

@@ -57,7 +57,7 @@ class FinalResult(ThemeableFrame):
             text="Image showing Disconnectome map overlaid on the 40w template, and the lesion map warped to the 40w template",
             wraplength=500,
             justify="center",
-            font=ctk.CTkFont(size=10),  # Smaller font
+            font=ctk.CTkFont(size=12),
         )
         caption_label.grid(row=1, column=0, pady=(0, 10), sticky="ew", padx=10)
 

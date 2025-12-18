@@ -128,19 +128,19 @@ if exist "data\" (
 goto :eof
 
 :create_icon
-if not exist "logo.ico" (
-    if exist "logo.png" (
-        call :print_status "Creating .ico icon from logo.png..."
+if not exist "icon.ico" (
+    if exist "app_icon.png" (
+        call :print_status "Creating .ico icon from app_icon.png..."
 
         REM Try to use ImageMagick if available
-        magick convert logo.png -define icon:auto-resize=256,128,64,48,32,16 logo.ico 2>nul
+        magick convert app_icon.png -define icon:auto-resize=256,128,64,48,32,16 icon.ico 2>nul
 
         if errorlevel 1 (
             call :print_warning "ImageMagick not found. Using PNG as fallback."
             call :print_warning "Install ImageMagick for better icon quality:"
             call :print_warning "  https://imagemagick.org/script/download.php"
         ) else (
-            call :print_status "Icon created: logo.ico"
+            call :print_status "Icon created: icon.ico"
         )
     )
 )

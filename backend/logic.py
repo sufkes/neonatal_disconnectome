@@ -51,7 +51,7 @@ def step1_from_state(
         if state_manager:
             state_manager.update_processing(
                 current_step="step1_running",
-                step2_progress=0.1,
+                step1_progress=0.1,
                 current_step_details="Starting warp",
             )
 
@@ -78,7 +78,7 @@ def step1_from_state(
 
         if state_manager:
             state_manager.update_processing(
-                step2_progress=0.5,
+                step1_progress=0.5,
                 current_step_details="Creating control space directory",
             )
         createControlSpaceDirectory(subject, runs_dir)
@@ -87,7 +87,7 @@ def step1_from_state(
 
         if state_manager:
             state_manager.update_processing(
-                step2_progress=0.95,
+                step1_progress=0.95,
                 current_step_details="Warping subject to age-matched template",
             )
         warpSubjectToAgeMatchedTemplate(

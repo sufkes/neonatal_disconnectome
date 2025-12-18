@@ -97,31 +97,31 @@ check_data_size() {
 
 # Create icon if it doesn't exist
 create_icon() {
-    if [ ! -f "logo.icns" ] && [ -f "logo.png" ]; then
-        print_status "Creating .icns icon from logo.png..."
+    if [ ! -f "icon.icns" ] && [ -f "app_icon.png" ]; then
+        print_status "Creating .icns icon from app_icon.png..."
 
         # Create iconset directory
-        mkdir -p logo.iconset
+        mkdir -p icon.iconset
 
         # Generate required icon sizes
-        sips -z 16 16     logo.png --out logo.iconset/icon_16x16.png
-        sips -z 32 32     logo.png --out logo.iconset/icon_16x16@2x.png
-        sips -z 32 32     logo.png --out logo.iconset/icon_32x32.png
-        sips -z 64 64     logo.png --out logo.iconset/icon_32x32@2x.png
-        sips -z 128 128   logo.png --out logo.iconset/icon_128x128.png
-        sips -z 256 256   logo.png --out logo.iconset/icon_128x128@2x.png
-        sips -z 256 256   logo.png --out logo.iconset/icon_256x256.png
-        sips -z 512 512   logo.png --out logo.iconset/icon_256x256@2x.png
-        sips -z 512 512   logo.png --out logo.iconset/icon_512x512.png
-        sips -z 1024 1024 logo.png --out logo.iconset/icon_512x512@2x.png
+        sips -z 16 16     app_icon.png --out icon.iconset/icon_16x16.png
+        sips -z 32 32     app_icon.png --out icon.iconset/icon_16x16@2x.png
+        sips -z 32 32     app_icon.png --out icon.iconset/icon_32x32.png
+        sips -z 64 64     app_icon.png --out icon.iconset/icon_32x32@2x.png
+        sips -z 128 128   app_icon.png --out icon.iconset/icon_128x128.png
+        sips -z 256 256   app_icon.png --out icon.iconset/icon_128x128@2x.png
+        sips -z 256 256   app_icon.png --out icon.iconset/icon_256x256.png
+        sips -z 512 512   app_icon.png --out icon.iconset/icon_256x256@2x.png
+        sips -z 512 512   app_icon.png --out icon.iconset/icon_512x512.png
+        sips -z 1024 1024 app_icon.png --out icon.iconset/icon_512x512@2x.png
 
         # Create icns file
-        iconutil -c icns logo.iconset
+        iconutil -c icns icon.iconset
 
         # Clean up
-        rm -rf logo.iconset
+        rm -rf icon.iconset
 
-        print_status "Icon created: logo.icns"
+        print_status "Icon created: icon.icns"
     fi
 }
 

@@ -30,7 +30,7 @@ print(f"{'='*80}\n")
 # ============================================================================
 datas = [
     ('themes/*.json', 'themes'),
-    ('logo.png', '.'),
+    ('app_icon.png', '.'),
     ('user_settings.json', '.'),
 ]
 
@@ -226,7 +226,7 @@ if IS_MACOS:
         target_arch=None,
         codesign_identity=None,
         entitlements_file=None,
-        icon='logo.icns' if os.path.exists('logo.icns') else 'logo.png'
+        icon='icon.icns' if os.path.exists('icon.icns') else 'app_icon.png'
     )
 
     coll = COLLECT(
@@ -243,7 +243,7 @@ if IS_MACOS:
     app = BUNDLE(
         coll,
         name='Disconnectome.app',
-        icon='logo.icns' if os.path.exists('logo.icns') else None,
+        icon='icon.icns' if os.path.exists('icon.icns') else None,
         bundle_identifier='com.disconnectome.app',
         info_plist={
             'NSPrincipalClass': 'NSApplication',
@@ -287,7 +287,7 @@ elif IS_WINDOWS:
         target_arch=None,
         codesign_identity=None,
         entitlements_file=None,
-        icon='logo.ico' if os.path.exists('logo.ico') else 'logo.png',
+        icon='icon.ico' if os.path.exists('icon.ico') else 'app_icon.png',
         version='version_info.txt' if os.path.exists('version_info.txt') else None,
     )
 
@@ -326,7 +326,7 @@ elif IS_LINUX:
         target_arch=None,
         codesign_identity=None,
         entitlements_file=None,
-        icon='logo.png',
+        icon='app_icon.png',
     )
 
     coll = COLLECT(

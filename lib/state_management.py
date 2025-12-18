@@ -7,6 +7,7 @@ type-safe, validated state containers.
 """
 
 from dataclasses import dataclass, asdict
+import sys
 from typing import Dict, Any
 from pathlib import Path
 from enum import Enum
@@ -77,7 +78,7 @@ class AppConfig:
 
     def save(self, path: str = "user_settings.json") -> bool:
         """
-        Save configuration to JSON file
+        Save configuration to JSON file using atomic write pattern
 
         Args:
             path: Path to settings file
@@ -85,13 +86,42 @@ class AppConfig:
         Returns:
             True if successful, False otherwise
         """
+        import tempfile
+
         try:
-            with open(path, "w") as f:
-                json.dump(asdict(self), f, indent=4)
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+
+            # Write to temporary file first (atomic write pattern)
+            dir_name = os.path.dirname(os.path.abspath(path))
+            with tempfile.NamedTemporaryFile(
+                mode="w", dir=dir_name, delete=False, suffix=".tmp"
+            ) as temp_file:
+                temp_path = temp_file.name
+                json.dump(asdict(self), temp_file, indent=4)
+
+            # Atomic rename (overwrites existing file)
+            # On Windows, need to remove target first
+            if os.path.exists(path) and sys.platform == "win32":
+                os.remove(path)
+
+            os.replace(temp_path, path)
+
             logger.info(f"Saved configuration to {path}")
             return True
+
+        except (IOError, OSError) as e:
+            logger.error(f"Failed to save settings to {path}: {e}")
+            # Clean up temp file if it exists
+            try:
+                if "temp_path" in locals() and os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except:
+                pass
+            return False
+
         except Exception as e:
-            logger.error(f"Failed to save settings: {e}")
+            logger.exception(f"Unexpected error saving settings: {e}")
             return False
 
     def update(self, **kwargs) -> None:
@@ -473,7 +503,7 @@ class StateManager:
 
     def save_session(self, path: str) -> bool:
         """
-        Save current processing session to file
+        Save current processing session to file using atomic write
 
         Args:
             path: Path to save session data
@@ -481,21 +511,43 @@ class StateManager:
         Returns:
             True if successful
         """
-        try:
-            from datetime import datetime
+        import tempfile
+        from datetime import datetime
 
+        try:
             session_data = {
                 "processing": self.processing.to_dict(),
                 "timestamp": datetime.now().isoformat(),
+                "version": "1.0",
             }
 
-            with open(path, "w") as f:
-                json.dump(session_data, f, indent=4)
+            # Create directory if needed
+            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+
+            # Atomic write pattern
+            dir_name = os.path.dirname(os.path.abspath(path))
+            with tempfile.NamedTemporaryFile(
+                mode="w", dir=dir_name, delete=False, suffix=".tmp"
+            ) as temp_file:
+                temp_path = temp_file.name
+                json.dump(session_data, temp_file, indent=4)
+
+            # Atomic rename
+            if os.path.exists(path) and sys.platform == "win32":
+                os.remove(path)
+
+            os.replace(temp_path, path)
 
             logger.info(f"Session saved to {path}")
             return True
+
         except Exception as e:
             logger.error(f"Failed to save session: {e}")
+            try:
+                if "temp_path" in locals() and os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except:
+                pass
             return False
 
     def load_session(self, path: str) -> bool:

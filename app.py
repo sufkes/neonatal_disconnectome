@@ -1,4 +1,5 @@
 import logging
+import os
 import queue
 from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
 
@@ -116,8 +117,12 @@ class DisconnectomeApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Disconnectome")
-        self.geometry("1024x768")
         self.minsize(640, 480)
+        width = int(self.winfo_screenwidth() * 0.9)
+        height = int(self.winfo_screenheight() * 0.9)
+        x = int((self.winfo_screenwidth() - width) / 2)
+        y = int((self.winfo_screenheight() - height) / 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
 
         # Use global state manager
         self.state_manager = state_manager
@@ -340,7 +345,7 @@ class DisconnectomeApp(ctk.CTk):
             self.main_container.grid_columnconfigure(0, weight=4)
 
     def create_header(self):
-        """Create application header with logo and controls"""
+        """Create application header with app icon and controls"""
         if hasattr(self, "header"):
             self.header.destroy()
 
@@ -357,8 +362,17 @@ class DisconnectomeApp(ctk.CTk):
         # Logo
 
         try:
-            light_img = Image.open("logo.png")
-            dark_img = Image.open("logo.png")
+            # PyInstaller-aware path resolution
+            if getattr(sys, "frozen", False):
+                base_path = sys._MEIPASS
+            else:
+                from lib.constants import PROJECT_ROOT
+
+                base_path = PROJECT_ROOT
+
+            full_logo_path = os.path.join(base_path, "app_icon.png")
+            light_img = Image.open(full_logo_path)
+            dark_img = Image.open(full_logo_path)
         except (FileNotFoundError, OSError):
             # create a simple placeholder; e.g., a solid gray square
             light_img = Image.new("RGBA", (40, 40), (200, 200, 200, 255))
@@ -476,11 +490,10 @@ class DisconnectomeApp(ctk.CTk):
         self.sidepanel = ctk.CTkFrame(self.main_container)
         self.sidepanel.grid(row=0, column=1, sticky="nsew")
 
-        # Use smaller font sizes
         self.textbox = tk.Text(
             self.sidepanel,
             wrap="word",
-            font=("Helvetica", 9),  # Smaller base font
+            font=("Verdana", 12),
             padx=5,
             pady=5,
         )
@@ -539,8 +552,8 @@ class DisconnectomeApp(ctk.CTk):
         )
 
         # Configure fonts
-        header_font = tkfont.Font(family="Helvetica", size=11, weight="bold")
-        title_font = tkfont.Font(family="Helvetica", size=10, weight="bold")
+        header_font = tkfont.Font(family="Verdana", size=12, weight="bold")
+        title_font = tkfont.Font(family="Verdana", size=10, weight="bold")
 
         # Configure text tags
         self.textbox.tag_configure("header", font=header_font, foreground=fg)
@@ -622,18 +635,11 @@ class DisconnectomeApp(ctk.CTk):
         self.current_screen_class = screen_class
 
         if self.current_screen:
-            # Save current screen state (deprecated method)
-            if hasattr(self.current_screen, "save_data"):
-                self.current_screen.save_data(self.app_data)
             self.current_screen.grid_forget()
 
         # Always create new screen instance for now
         # TODO: Implement screen caching/reuse if needed
         self.current_screen = screen_class(self.content_frame, *args, app=self)
-
-        # Load screen state (deprecated method)
-        if hasattr(self.current_screen, "load_data"):
-            self.current_screen.load_data(self.app_data)
 
         self.current_screen.grid(row=0, column=0, sticky="nsew")
         self.update()
@@ -919,7 +925,7 @@ class DisconnectomeApp(ctk.CTk):
             self._warning_banner,
             text="⚠️ Data files not installed. Download from Data menu to enable processing.",
             text_color="white",
-            font=ctk.CTkFont(size=11, weight="bold"),
+            font=ctk.CTkFont(size=12, weight="bold"),
         )
         warning_label.pack(side="left", padx=15, pady=5)
 
@@ -1000,6 +1006,13 @@ class DisconnectomeApp(ctk.CTk):
             label="Start a new run",
             command=self.start_a_new_run,
             accelerator="Cmd+N" if sys.platform == "darwin" else "Ctrl+N",
+        )
+
+        file_menu.add_separator()
+        file_menu.add_command(
+            label="Exit Application",
+            command=self.destroy,
+            accelerator="Cmd+Q" if sys.platform == "darwin" else "Ctrl+Q",
         )
 
         menubar.add_cascade(label="File", menu=file_menu)
@@ -1145,12 +1158,23 @@ class DisconnectomeApp(ctk.CTk):
     def show_about(self):
         """Show about dialog"""
         from tkinter import messagebox
+        from lib.constants import __version__, __build_date__, __author__
 
         about_text = (
-            "Disconnectome v1.0.0\n\n"
+            f"Disconnectome v{__version__}\n"
+            f"Build Date: {__build_date__}\n\n"
+            f"Developed by {__author__}\n\n"
             "Brain disconnectome analysis tool for\n"
             "neonatal brain imaging data\n\n"
-            "For research use only"
+            "For research use only\n\n"
+            "---\n\n"
+            "Technologies:\n"
+            "• Python 3.11+\n"
+            "• CustomTkinter\n"
+            "• ANTs (Advanced Normalization Tools)\n"
+            "• dHCP Brain Templates\n\n"
+            "Data Location:\n"
+            f"{self.data_downloader.data_dir}"
         )
 
         messagebox.showinfo("About Disconnectome", about_text, parent=self)

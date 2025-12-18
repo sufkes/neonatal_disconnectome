@@ -1,6 +1,12 @@
 import os
 import sys
+import tempfile
 from pathlib import Path
+import logging
+
+# Setup basic logging for this module
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Determine if running as bundled app or development
 if getattr(sys, "frozen", False):
@@ -16,6 +22,29 @@ if getattr(sys, "frozen", False):
         DATA_ROOT = Path(os.environ.get("APPDATA")) / "Disconnectome" / "data"
     else:  # Linux
         DATA_ROOT = Path.home() / ".local" / "share" / "Disconnectome" / "data"
+
+    # ✅ FIX: Add error handling with tempfile fallback
+    try:
+        DATA_ROOT.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Using data directory: {DATA_ROOT}")
+    except PermissionError:
+        logger.warning(
+            f"Cannot create data directory at {DATA_ROOT} due to permissions."
+        )
+        logger.warning("Falling back to temporary directory.")
+
+        # Fallback to temp directory
+        DATA_ROOT = Path(tempfile.gettempdir()) / "Disconnectome" / "data"
+        DATA_ROOT.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Using temporary data directory: {DATA_ROOT}")
+        logger.warning("Note: Data in temp directory may be deleted on system restart.")
+    except Exception as e:
+        logger.error(f"Unexpected error creating data directory: {e}")
+        # Last resort fallback
+        DATA_ROOT = Path(tempfile.gettempdir()) / "Disconnectome" / "data"
+        DATA_ROOT.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Using fallback temporary directory: {DATA_ROOT}")
+
 else:
     # Running in development - check for local data first
     PROJECT_ROOT = Path(__file__).parent.parent
@@ -24,7 +53,7 @@ else:
     # Use local data if it exists and has controls, otherwise use system location
     if LOCAL_DATA.exists() and (LOCAL_DATA / "controls").exists():
         DATA_ROOT = LOCAL_DATA
-        print(f"[DEV MODE] Using local data directory: {DATA_ROOT}")
+        logger.info(f"[DEV MODE] Using local data directory: {DATA_ROOT}")
     else:
         # Fall back to system location
         if sys.platform == "darwin":  # macOS
@@ -39,7 +68,17 @@ else:
             DATA_ROOT = Path(os.environ.get("APPDATA")) / "Disconnectome" / "data"
         else:  # Linux
             DATA_ROOT = Path.home() / ".local" / "share" / "Disconnectome" / "data"
-        print(f"[DEV MODE] No local data found, will use: {DATA_ROOT}")
+
+        logger.info(f"[DEV MODE] No local data found, will use: {DATA_ROOT}")
+
+        # ✅ FIX: Also add error handling in dev mode
+        try:
+            if not DATA_ROOT.exists():
+                DATA_ROOT.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            logger.warning(f"Cannot create {DATA_ROOT}, using temp directory")
+            DATA_ROOT = Path(tempfile.gettempdir()) / "Disconnectome" / "data"
+            DATA_ROOT.mkdir(parents=True, exist_ok=True)
 
 # Project root (one level up from this file's directory)
 DATA_DIR = str(DATA_ROOT)
@@ -48,9 +87,9 @@ TEMPLATE_TEMPLATES_DIR = TEMPLATE_DIR / "templates"
 TEMPLATE_WARPS_DIR = TEMPLATE_DIR / "warps-ants"
 CONTROLS_DIR = DATA_ROOT / "controls"
 
-THUMBNAILS_DIR = os.path.join(PROJECT_ROOT, "thumbnails")
+THUMBNAILS_DIR = os.path.join(Path(__file__).parent.parent, "thumbnails")
 
-# constants for runs directory structure
+# Constants for runs directory structure
 THUMBNAILS = "thumbnails"
 CONTROL_SPACE = "control_space"
 DISCONNECTOME = "disconnectome"
@@ -64,12 +103,11 @@ THUMBNAIL_LESION_ORIGINAL = "lesion_on_original.png"
 THUMBNAIL_LESION_TEMPLATE = "lesion_on_age_matched_template_clusters.png"
 THUMBNAIL_DISCONNECTOME = "disconnectome_at_lesion_centroids_0.png"
 
+# ✅ NEW: Add version information
+__version__ = "1.0.0"
+__build_date__ = "2025-12-18"
+__author__ = "Your Lab Name"
 
-# Create directories if they don't exist (only for system locations)
-if not getattr(sys, "frozen", False):
-    # In dev mode with local data, don't create system dirs
-    if not (Path(__file__).parent.parent / "data").exists():
-        DATA_ROOT.mkdir(parents=True, exist_ok=True)
-else:
-    # In bundled mode, always create system dirs
-    DATA_ROOT.mkdir(parents=True, exist_ok=True)
+# Log final data directory location
+logger.info(f"Data directory configured: {DATA_ROOT}")
+logger.info(f"Application version: {__version__}")

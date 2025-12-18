@@ -41,6 +41,5 @@ runs/*
 
 user_settings.json
 
-# ignore everything in img folder except the logo
-web/img/*
+# ignore everything in img folder except the app_icon.png
 thumbnails/*

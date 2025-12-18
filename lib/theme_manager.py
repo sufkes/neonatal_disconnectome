@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Optional, Callable
 import logging
 
-from lib.constants import PROJECT_ROOT
 
 logger = logging.getLogger("disconnectome")
 
@@ -40,6 +39,8 @@ class ThemeManager:
         if getattr(sys, "frozen", False):
             base_path = sys._MEIPASS
         else:
+            from lib.constants import PROJECT_ROOT
+
             base_path = PROJECT_ROOT
 
         themes_path = os.path.join(base_path, self.themes_folder)
@@ -71,6 +72,8 @@ class ThemeManager:
         if getattr(sys, "frozen", False):
             base_path = sys._MEIPASS
         else:
+            from lib.constants import PROJECT_ROOT
+
             base_path = PROJECT_ROOT
 
         full_theme_path = os.path.join(base_path, theme_path)
