@@ -258,7 +258,7 @@ open dist/Disconnectome.app
 
 ```powershell
 # Clone repository
-git clone https://github.com/your-org/disconnectome.git
+git clone https://github.com/sufkes/neonatal_disconnectome.git
 cd disconnectome
 
 # Create virtual environment

@@ -86,12 +86,37 @@ hiddenimports = [
     'skimage',
     'ants',
     'antspyx',
+
+    # ✅ FIX: Add jaraco imports
+    'jaraco',
+    'jaraco.text',
+    'jaraco.functools',
+    'jaraco.context',
+    'jaraco.collections',
+    'jaraco.classes',
+
+    # ✅ FIX: Add jaraco dependencies
+    'importlib_metadata',
+    'importlib_resources',
+    'zipp',
+    'more_itertools',
+
+    # ✅ FIX: Add pkg_resources (often the root cause)
+    'pkg_resources',
+    'pkg_resources.py2_warn',
 ]
 
 # Collect submodules for problematic packages
 hiddenimports += collect_submodules('scipy.sparse')
 hiddenimports += collect_submodules('scipy.special')
 hiddenimports += collect_submodules('skimage')
+
+# ✅ FIX: Collect jaraco submodules
+print("Collecting jaraco submodules...")
+try:
+    hiddenimports += collect_submodules('jaraco')
+except Exception as e:
+    print(f"Warning: Could not collect jaraco submodules: {e}")
 
 # Platform-specific hidden imports
 if IS_WINDOWS:
@@ -113,6 +138,15 @@ try:
     print(f"✓ Collected CustomTkinter: {len(tmp_ret[0])} data files, {len(tmp_ret[1])} binaries")
 except Exception as e:
     print(f"⚠ Warning: Could not collect customtkinter: {e}")
+
+# ✅ FIX: Collect jaraco.text data files
+try:
+    print("Collecting jaraco.text data files...")
+    jaraco_datas = collect_data_files('jaraco.text')
+    datas += jaraco_datas
+    print(f"✅ Collected jaraco.text: {len(jaraco_datas)} data files")
+except Exception as e:
+    print(f"⚠️  Warning: Could not collect jaraco.text data: {e}")
 
 # ANTsPyx - can be large, collect selectively
 try:
