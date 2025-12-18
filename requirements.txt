@@ -1,4 +1,3 @@
-eel
 scipy==1.15.3
 antspyx
 nibabel
@@ -9,3 +8,5 @@ matplotlib
 scikit-image
 pyside6
 click
+customtkinter
+pillow

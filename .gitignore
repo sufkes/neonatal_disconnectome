@@ -21,7 +21,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -36,11 +35,14 @@ MANIFEST
 *.log.*
 
 # Data files
-controls/*
+data/*
 example_input_data/*
 runs/*
-template/*
+controls.tar.gz
+template.tar.gz
+*.tar.gz
 
-# ignore everything in img folder except the logo
-web/img/*
-!web/img/logo.png
+user_settings.json
+
+# ignore everything in img folder except the app_icon.png
+thumbnails/*

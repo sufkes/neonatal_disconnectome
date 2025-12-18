@@ -1,8 +1,11 @@
 # Data files
+data/
 controls/
 template/
 runs/
 example_input_data/
+controls.tar.gz
+template.tar.gz
 
 .dotnet/
 .vscode-server/
