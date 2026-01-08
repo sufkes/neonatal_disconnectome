@@ -4,8 +4,10 @@ import customtkinter as ctk
 class LoadingOverlay(ctk.CTkFrame):
     """Themed loading overlay that adapts to current theme"""
 
-    def __init__(self, master, **kwargs):
+    def __init__(self, master, on_cancel=None, **kwargs):
         super().__init__(master, **kwargs)
+
+        self.on_cancel = on_cancel
 
         # Configure overlay with semi-transparent backdrop
         # Don't call _update_overlay_colors yet - widgets don't exist!
@@ -41,11 +43,29 @@ class LoadingOverlay(ctk.CTkFrame):
         )
         self.progress_label.grid(row=3, column=0, pady=(5, 0))
 
+        # Cancel button (if callback provided)
+        if self.on_cancel:
+            self.cancel_button = ctk.CTkButton(
+                self.content_frame,
+                text="Cancel",
+                command=self._handle_cancel,
+                width=100,
+                height=30,
+            )
+            self.cancel_button.grid(row=4, column=0, pady=(15, 0))
+
         # NOW update colors after all widgets are created
         self._update_overlay_colors()
 
         self.progressbar.stop()
         self.hide()
+
+    def _handle_cancel(self):
+        """Handle cancel button click"""
+        if self.on_cancel:
+            # Disable button to prevent multiple clicks
+            self.cancel_button.configure(state="disabled", text="Cancelling...")
+            self.on_cancel()
 
     def _set_initial_overlay_color(self):
         """Set just the overlay background color initially"""
@@ -111,7 +131,12 @@ class LoadingOverlay(ctk.CTkFrame):
         self._update_overlay_colors()  # Update colors before showing
         self.status_label.configure(text=status)
         self.detail_label.configure(text=detail)
-        self.progress_label.configure(text="")
+        self.progress_label.configure(text="0%")
+
+        # Re-enable cancel button if it exists
+        if hasattr(self, "cancel_button"):
+            self.cancel_button.configure(state="normal", text="Cancel")
+
         self.lift()  # Bring to front
         self.place(relx=0, rely=0, relwidth=1, relheight=1)
         self.progressbar.start()
@@ -124,7 +149,8 @@ class LoadingOverlay(ctk.CTkFrame):
         if detail is not None:
             self.detail_label.configure(text=detail)
         if progress is not None:
-            self.progress_label.configure(text=f"{int(progress * 100)}%")
+            percentage = int(progress * 100)
+            self.progress_label.configure(text=f"{percentage}%")
         self.update_idletasks()  # Force UI update
 
     def update_theme(self):

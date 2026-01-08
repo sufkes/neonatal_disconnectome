@@ -8,9 +8,9 @@ gestational age.
 
 import customtkinter as ctk
 from tkinter import filedialog
-import threading
 
 from lib.gui_utils import update_widgets_theme
+from lib.threading_utils import TaskResult, TaskStatus
 
 from .loading_overlay import LoadingOverlay
 from lib.theme_manager import ThemeableFrame
@@ -23,6 +23,10 @@ class WarpedLesionForm(ThemeableFrame):
         self.go_back_callback = go_back_callback
         self.app = app
         self.state_manager = app.state_manager if app else None
+
+        # Get task manager from app
+        self.task_manager = app.task_manager if app else None
+        self.gui_executor = app.gui_executor if app else None
 
         self.grid_columnconfigure(0, weight=1)
 
@@ -319,68 +323,104 @@ class WarpedLesionForm(ThemeableFrame):
         )
 
     def on_next(self):
-        """Handle next button click"""
+        """Handle next button click using thread-safe task system"""
         is_valid, errors = self.validate_form()
-
         if not is_valid:
-            if self.app:
-                self.app.logger.warning(f"Form validation failed: {errors}")
             return
 
-        # Proceed to processing
-        if self.app:
-            self.next_button.configure(state="disabled")
-            self.back_button.configure(state="disabled")
-            # Show loading with descriptive status
-            self.loading_overlay.show(
-                status="Generating Disconnectome",
-                detail="This may take several minutes...",
+        # Show loading
+        self.loading_overlay.show(
+            status="Generating Disconnectome", detail="Initializing..."
+        )
+        self.set_buttons_enabled(False)
+
+        # Get state
+        processing = self.state_manager.get_processing()
+        config = self.state_manager.get_config()
+
+        # Define worker function
+        def worker(cancel_event, progress_callback):
+            """Worker function with cancellation and progress support"""
+
+            # Check for cancellation
+            if cancel_event.is_set():
+                return False
+
+            progress_callback(0.1, "Starting step 2...")
+
+            # Import here to avoid circular imports
+            from backend.logic import process_warped_lesion_from_state
+
+            # Run processing
+            success = process_warped_lesion_from_state(
+                processing,
+                config,
+                self.state_manager,
+                cancel_event=cancel_event,
+                progress_callback=progress_callback,
             )
 
-            processing = self.state_manager.get_processing()
+            return success
 
-            # Get values from form
-            lesion_path = self.lesion_mask_path.get()
-            subject_id = self.subject_id.get()
-            template_age = self.template_age.get()
-            image_type = processing.brain_type
+        # Define completion callback
+        def on_complete(result: TaskResult):
+            """Completion callback (runs on GUI thread)"""
+            self.loading_overlay.hide()
+            self.set_buttons_enabled(True)
 
-            # Get runs folder from config
-            config = self.state_manager.get_config()
-            runs_dir = config.runs_folder
-
-            if self.app:
-                self.app.logger.info(
-                    f"Starting Warped Lesion Processing:\n"
-                    f"  runs_dir: {runs_dir}\n"
-                    f"  subject: {subject_id}\n"
-                    f"  image_type: {image_type}\n"
-                    f"  lesion_mask: {lesion_path}\n"
-                    f"  template_age: {template_age}\n"
+            if result.status == TaskStatus.COMPLETED and result.result:
+                # Update state
+                self.state_manager.update_processing(
+                    step1_completed=True, step2_completed=True
                 )
 
-            # Run processing in background thread
-            def run_warped_processing():
-                try:
-                    from backend.logic import process_warped_lesion_from_state
+                # Navigate to next screen
+                if self.app:
+                    self.app.show_final_result()
 
-                    success = process_warped_lesion_from_state(
-                        processing, config, self.state_manager
-                    )
+            elif result.status == TaskStatus.CANCELLED:
+                self.app.logger.info("Processing was cancelled by user")
 
-                    self.after(0, lambda: self.on_processing_complete(success))
-                except Exception as e:
-                    if self.app:
-                        self.app.logger.error(
-                            f"Warped lesion processing failed: {e}", exc_info=True
-                        )
-                    self.after(0, lambda: self.on_processing_complete(False))
+            else:
+                # Handle error
+                error_msg = result.error_message or "Unknown error"
+                self.app.logger.error(f"Step2 failed: {error_msg}")
 
-            threading.Thread(target=run_warped_processing, daemon=True).start()
-            # start polling for state changes
-            self.app.poll_processing_state()
-            # Also poll loading overlay updates
-            self.poll_loading_updates()
+                # Show error dialog
+                from tkinter import messagebox
+
+                messagebox.showerror(
+                    "Processing Failed",
+                    f"Step 2 failed: {error_msg}\n\nCheck logs for details.",
+                    parent=self,
+                )
+
+        # Define progress callback
+        def on_progress(progress: float, message: str):
+            """Progress callback (runs on GUI thread)"""
+            self.loading_overlay.update_status(detail=message, progress=progress)
+
+        # Create and start task
+        try:
+            task = self.task_manager.create_task(
+                task_id="step2",
+                worker_func=worker,
+                on_progress=on_progress,
+                on_complete=on_complete,
+            )
+
+            self.task_manager.start_task("step2")
+
+        except Exception as e:
+            self.loading_overlay.hide()
+            self.set_buttons_enabled(True)
+            self.app.logger.error(f"Failed to start task: {e}", exc_info=True)
+
+    def set_buttons_enabled(self, enabled: bool):
+        """Enable/disable navigation buttons"""
+        state = "normal" if enabled else "disabled"
+        self.back_button.configure(state=state)
+        self.next_button.configure(state=state)
 
     def poll_loading_updates(self):
         """Update loading overlay with processing details"""

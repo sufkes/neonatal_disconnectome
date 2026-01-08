@@ -8,14 +8,12 @@ type-safe, validated state containers.
 
 from dataclasses import dataclass, asdict
 import sys
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pathlib import Path
 from enum import Enum
 import json
 import logging
 import os
-
-from lib.constants import TEMPLATE_TEMPLATES_DIR
 
 logger = logging.getLogger("disconnectome")
 
@@ -53,15 +51,7 @@ class AppConfig:
 
     @classmethod
     def load(cls, path: str = "user_settings.json") -> "AppConfig":
-        """
-        Load configuration from JSON file
-
-        Args:
-            path: Path to settings file
-
-        Returns:
-            AppConfig instance with loaded settings or defaults
-        """
+        """Load configuration from JSON file"""
         if Path(path).exists():
             try:
                 with open(path, "r") as f:
@@ -77,31 +67,19 @@ class AppConfig:
         return cls()
 
     def save(self, path: str = "user_settings.json") -> bool:
-        """
-        Save configuration to JSON file using atomic write pattern
-
-        Args:
-            path: Path to settings file
-
-        Returns:
-            True if successful, False otherwise
-        """
+        """Save configuration to JSON file"""
         import tempfile
 
         try:
-            # Create directory if it doesn't exist
-            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+            os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
 
-            # Write to temporary file first (atomic write pattern)
-            dir_name = os.path.dirname(os.path.abspath(path))
+            dir_name = os.path.dirname(os.path.abspath(path)) or "."
             with tempfile.NamedTemporaryFile(
                 mode="w", dir=dir_name, delete=False, suffix=".tmp"
             ) as temp_file:
                 temp_path = temp_file.name
                 json.dump(asdict(self), temp_file, indent=4)
 
-            # Atomic rename (overwrites existing file)
-            # On Windows, need to remove target first
             if os.path.exists(path) and sys.platform == "win32":
                 os.remove(path)
 
@@ -112,7 +90,6 @@ class AppConfig:
 
         except (IOError, OSError) as e:
             logger.error(f"Failed to save settings to {path}: {e}")
-            # Clean up temp file if it exists
             try:
                 if "temp_path" in locals() and os.path.exists(temp_path):
                     os.remove(temp_path)
@@ -120,17 +97,8 @@ class AppConfig:
                 pass
             return False
 
-        except Exception as e:
-            logger.exception(f"Unexpected error saving settings: {e}")
-            return False
-
     def update(self, **kwargs) -> None:
-        """
-        Update configuration values
-
-        Args:
-            **kwargs: Configuration fields to update
-        """
+        """Update configuration values"""
         for key, value in kwargs.items():
             if hasattr(self, key):
                 setattr(self, key, value)
@@ -156,7 +124,7 @@ class ProcessingState:
     step1_completed: bool = False
     step2_completed: bool = False
 
-    # Output paths (populated after processing)
+    # Output paths
     warped_brain_image_path: str = ""
     warped_lesion_mask_path: str = ""
     age_matched_template_path: str = ""
@@ -171,21 +139,15 @@ class ProcessingState:
     thumbnail_disconnectome: str = ""
 
     # Progress tracking
-    current_step: str = ""  # "idle", "step1_running", "step1_complete", etc.
-    current_step_details: str = ""  # "create control space directory", "warp subject to age-matched template", etc.
-    step1_progress: float = 0.0  # 0.0 to 1.0
+    current_step: str = ""
+    current_step_details: str = ""
+    step1_progress: float = 0.0
     step2_progress: float = 0.0
 
     def validate(self) -> tuple[bool, list[str]]:
-        """
-        Validate the current processing state
-
-        Returns:
-            Tuple of (is_valid, list_of_errors)
-        """
+        """Validate the current processing state"""
         errors = []
 
-        # Validate required fields for step 1
         if not self.brain_image_path and not self.lesion_already_warped:
             errors.append("Brain image path is required")
 
@@ -199,9 +161,7 @@ class ProcessingState:
         if not self.subject_id:
             errors.append("Subject ID is required")
         elif not self._is_valid_subject_id(self.subject_id):
-            errors.append(
-                "Subject ID contains invalid characters (only letters, numbers, underscore, and dash allowed)"
-            )
+            errors.append("Subject ID contains invalid characters")
 
         if self.lesion_already_warped:
             if not self.template_age:
@@ -210,9 +170,7 @@ class ProcessingState:
                 try:
                     age = float(self.template_age)
                     if age < 28 or age > 44:
-                        errors.append(
-                            "Warning: Age is outside of 28-44 weeks. Registration to template may be poor."
-                        )
+                        errors.append("Warning: Age is outside of 28-44 weeks")
                 except ValueError:
                     errors.append("Template age must be a valid number")
         else:
@@ -222,23 +180,19 @@ class ProcessingState:
                 try:
                     age = float(self.gestational_age)
                     if age < 28 or age > 44:
-                        errors.append(
-                            "Warning: Age is outside of 28-44 weeks. Registration to template may be poor."
-                        )
+                        errors.append("Warning: Age is outside of 28-44 weeks")
                 except ValueError:
                     errors.append("Gestational age must be a valid number")
 
-        # Validate file paths exist
         if self.brain_image_path and not Path(self.brain_image_path).exists():
             errors.append(f"Brain image file not found: {self.brain_image_path}")
 
-        # Validate file extensions
         if self.brain_image_path:
             if not (
                 self.brain_image_path.endswith(".nii")
                 or self.brain_image_path.endswith(".nii.gz")
             ):
-                errors.append("Brain image must be a NIFTI file (.nii or .nii.gz)")
+                errors.append("Brain image must be a NIFTI file")
 
         if self.lesion_mask_path and not Path(self.lesion_mask_path).exists():
             errors.append(f"Lesion mask file not found: {self.lesion_mask_path}")
@@ -248,7 +202,7 @@ class ProcessingState:
                 self.lesion_mask_path.endswith(".nii")
                 or self.lesion_mask_path.endswith(".nii.gz")
             ):
-                errors.append("Lesion mask must be a NIFTI file (.nii or .nii.gz)")
+                errors.append("Lesion mask must be a NIFTI file")
 
         return len(errors) == 0, errors
 
@@ -260,12 +214,7 @@ class ProcessingState:
         return bool(re.match(r"^[\w-]+$", subject_id))
 
     def get_input_summary(self) -> Dict[str, str]:
-        """
-        Get a summary of input data for display
-
-        Returns:
-            Dictionary of input parameters (filters out None/empty values)
-        """
+        """Get a summary of input data for display"""
         summary = {
             "Subject ID": self.subject_id,
             "Gestational Age (weeks)": self.gestational_age
@@ -282,28 +231,17 @@ class ProcessingState:
             else None,
         }
 
-        # Filter out None values and empty strings
         return {k: v for k, v in summary.items() if v is not None and v != ""}
 
     def get_output_summary(self, runs_folder: str = "") -> Dict[str, str]:
-        """
-        Get a summary of output data for display
-
-        Args:
-            runs_folder: Path to runs folder to build complete paths
-
-        Returns:
-            Dictionary of output paths
-        """
+        """Get a summary of output data for display"""
         outputs = {}
 
         if not runs_folder or not self.subject_id:
             return outputs
 
-        # Import here to avoid circular imports
-        from lib.constants import TEMPLATE_SPACE, DISCONNECTOME
+        from lib.constants import TEMPLATE_SPACE, DISCONNECTOME, TEMPLATE_TEMPLATES_DIR
 
-        # Build actual output paths based on what's been completed
         if self.step1_completed and not self.lesion_already_warped:
             age = self.gestational_age
             if age:
@@ -333,11 +271,11 @@ class ProcessingState:
                     )
 
         if self.step2_completed:
-            if self.lesion_already_warped:
-                age = self.template_age
-            else:
-                age = self.gestational_age
-
+            age = (
+                self.template_age
+                if self.lesion_already_warped
+                else self.gestational_age
+            )
             if age:
                 from lib.utils import getRoundedAge
 
@@ -347,9 +285,7 @@ class ProcessingState:
                     f"week{rounded_age}_{self.brain_type}.nii.gz",
                 )
                 if os.path.exists(age_matched_template):
-                    outputs["Age-matched template image(fixed image for warp step)"] = (
-                        age_matched_template
-                    )
+                    outputs["Age-matched template image"] = age_matched_template
 
             disconnectome_dir = os.path.join(
                 runs_folder, self.subject_id, DISCONNECTOME
@@ -366,12 +302,6 @@ class ProcessingState:
             )
             if os.path.exists(lesion_40w):
                 outputs["Lesion image in 40w template space"] = lesion_40w
-
-            week40_template = os.path.join(
-                TEMPLATE_TEMPLATES_DIR, f"week40_{self.brain_type}.nii.gz"
-            )
-            if os.path.exists(week40_template):
-                outputs["40w template image"] = week40_template
 
         return outputs
 
@@ -392,36 +322,29 @@ class ProcessingState:
 
 class StateManager:
     """
-    Central state manager for the application
-
-    This class manages both configuration and processing state,
-    providing a single interface for state operations.
+    Central state manager for the application - Thread-Safe Version
     """
 
-    def __init__(self, config_path: str = "user_settings.json"):
+    def __init__(self, config_path: str = "user_settings.json", gui_executor=None):
         """
-        Initialize state manager
+        Initialize state manager.
 
         Args:
             config_path: Path to configuration file
+            gui_executor: GUIThreadExecutor for thread-safe observer notifications
         """
         self.config_path = config_path
         self.config = AppConfig.load(config_path)
         self.processing = ProcessingState()
         self._observers: list[callable] = []
 
+        # ✅ FIX: Store gui_executor for thread-safe observer notifications
+        self.gui_executor = gui_executor
+
         logger.info("State manager initialized")
 
     def update_config(self, **kwargs) -> bool:
-        """
-        Update configuration and save to disk
-
-        Args:
-            **kwargs: Configuration fields to update
-
-        Returns:
-            True if saved successfully
-        """
+        """Update configuration and save to disk"""
         self.config.update(**kwargs)
         success = self.config.save(self.config_path)
         if success:
@@ -430,10 +353,9 @@ class StateManager:
 
     def update_processing(self, **kwargs) -> None:
         """
-        Update processing state
+        Update processing state.
 
-        Args:
-            **kwargs: Processing state fields to update
+        Note: Can be called from background threads.
         """
         for key, value in kwargs.items():
             if hasattr(self.processing, key):
@@ -445,12 +367,7 @@ class StateManager:
         self._notify_observers("processing")
 
     def validate_processing_state(self) -> tuple[bool, list[str]]:
-        """
-        Validate current processing state
-
-        Returns:
-            Tuple of (is_valid, list_of_errors)
-        """
+        """Validate current processing state"""
         return self.processing.validate()
 
     def reset_processing(self) -> None:
@@ -467,50 +384,36 @@ class StateManager:
         return self.processing
 
     def subscribe(self, observer: callable) -> None:
-        """
-        Subscribe to state changes
-
-        Args:
-            observer: Callable that takes (state_type: str) as argument
-        """
+        """Subscribe to state changes"""
         if observer not in self._observers:
             self._observers.append(observer)
             logger.debug(f"Observer subscribed: {observer.__name__}")
 
     def unsubscribe(self, observer: callable) -> None:
-        """
-        Unsubscribe from state changes
-
-        Args:
-            observer: Previously subscribed observer
-        """
+        """Unsubscribe from state changes"""
         if observer in self._observers:
             self._observers.remove(observer)
             logger.debug(f"Observer unsubscribed: {observer.__name__}")
 
     def _notify_observers(self, state_type: str) -> None:
         """
-        Notify all observers of state change
+        Notify all observers of state change (thread-safe).
 
-        Args:
-            state_type: Type of state that changed ("config" or "processing")
+        ✅ FIX: Use gui_executor to schedule on GUI thread if available.
         """
         for observer in self._observers:
             try:
-                observer(state_type)
+                # ✅ Schedule observer on GUI thread if gui_executor available
+                if self.gui_executor:
+                    self.gui_executor.submit(observer, state_type)
+                else:
+                    # Fallback to direct call (if called from main thread)
+                    observer(state_type)
             except Exception as e:
                 logger.error(f"Error notifying observer {observer.__name__}: {e}")
 
     def save_session(self, path: str) -> bool:
-        """
-        Save current processing session to file using atomic write
-
-        Args:
-            path: Path to save session data
-
-        Returns:
-            True if successful
-        """
+        """Save current processing session to file"""
         import tempfile
         from datetime import datetime
 
@@ -521,18 +424,15 @@ class StateManager:
                 "version": "1.0",
             }
 
-            # Create directory if needed
-            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+            os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
 
-            # Atomic write pattern
-            dir_name = os.path.dirname(os.path.abspath(path))
+            dir_name = os.path.dirname(os.path.abspath(path)) or "."
             with tempfile.NamedTemporaryFile(
                 mode="w", dir=dir_name, delete=False, suffix=".tmp"
             ) as temp_file:
                 temp_path = temp_file.name
                 json.dump(session_data, temp_file, indent=4)
 
-            # Atomic rename
             if os.path.exists(path) and sys.platform == "win32":
                 os.remove(path)
 
@@ -551,15 +451,7 @@ class StateManager:
             return False
 
     def load_session(self, path: str) -> bool:
-        """
-        Load processing session from file
-
-        Args:
-            path: Path to session file
-
-        Returns:
-            True if successful
-        """
+        """Load processing session from file"""
         try:
             if not Path(path).exists():
                 logger.warning(f"Session file not found: {path}")

@@ -4,6 +4,8 @@
 
 import logging
 import os
+import threading
+from typing import Callable, Optional
 import nibabel as nib
 
 from lib.constants import (
@@ -57,7 +59,21 @@ def makeDisconnectomeMap(in_paths, out_path, threshold):
         return True
 
 
-def generateDisconnectome(runs_dir, subject, image_type, threshold=0):
+def generateDisconnectome(
+    runs_dir,
+    subject,
+    image_type,
+    threshold=0,
+    cancel_event: Optional[threading.Event] = None,
+    progress_callback: Optional[Callable[[float, str], None]] = None,
+):
+    def check_cancelled():
+        return cancel_event and cancel_event.is_set()
+
+    def update_progress(progress: float, message: str):
+        if progress_callback:
+            progress_callback(progress, message)
+
     try:
         runs_path = os.path.join(runs_dir, subject)
         runs_visitation_maps_40w_path = os.path.join(runs_path, VISITATION_MAPS_40W)

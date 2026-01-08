@@ -1,5 +1,7 @@
 import logging
 import os
+import threading
+from typing import Callable, Optional
 import ants
 
 from lib.constants import (
@@ -12,7 +14,20 @@ from lib.constants import (
 logger = logging.getLogger(__name__)
 
 
-def warpVisitationMap(runs_dir, subject, image_type="T1w"):
+def warpVisitationMap(
+    runs_dir,
+    subject,
+    image_type="T1w",
+    cancel_event: Optional[threading.Event] = None,
+    progress_callback: Optional[Callable[[float, str], None]] = None,
+):
+    def check_cancelled():
+        return cancel_event and cancel_event.is_set()
+
+    def update_progress(progress: float, message: str):
+        if progress_callback:
+            progress_callback(progress, message)
+
     try:
         runs_path = os.path.join(runs_dir, subject)
         runs_control_space_path = os.path.join(runs_path, CONTROL_SPACE)

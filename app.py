@@ -11,6 +11,8 @@ import customtkinter as ctk
 from PIL import Image
 
 from lib.gui_utils import update_widgets_theme
+from lib.logging_handler import ThreadSafeTkinterHandler
+from lib.threading_utils import GUIThreadExecutor, TaskManager
 from screens.ctk_hyperlink_manager import CTkHyperlinkManager
 from screens.disconnectome_form import DisconnectomeForm
 from screens.result_screen import FinalResult
@@ -124,8 +126,10 @@ class DisconnectomeApp(ctk.CTk):
         y = int((self.winfo_screenheight() - height) / 2)
         self.geometry(f"{width}x{height}+{x}+{y}")
 
+        self.gui_executor = GUIThreadExecutor(self)
+
         # Use global state manager
-        self.state_manager = state_manager
+        self.state_manager = StateManager(gui_executor=self.gui_executor)
 
         # Subscribe to state changes
         self.state_manager.subscribe(self.on_state_changed)
@@ -148,6 +152,9 @@ class DisconnectomeApp(ctk.CTk):
 
         # Initialize data downloader
         self.data_downloader = DataDownloader()
+
+        # Initialize task manager
+        self.task_manager = TaskManager(self.gui_executor)
 
         # Configure grid: 3 rows (header, main, footer)
         self.grid_rowconfigure(0, weight=0)  # header fixed height
@@ -384,34 +391,6 @@ class DisconnectomeApp(ctk.CTk):
         self.logo_label = ctk.CTkLabel(self.header, image=self.logo_image, text="")
         self.logo_label.pack(side="left", padx=15, pady=10)
 
-        # Appearance mode selector
-        appearance_options = ["Light", "Dark", "System"]
-        current_mode = self.state_manager.get_config().appearance
-
-        self.appearance_menu = ctk.CTkOptionMenu(
-            self.header, values=appearance_options, command=self.change_appearance_mode
-        )
-        self.appearance_menu.set(current_mode)
-        self.appearance_menu.pack(side="right", padx=15, pady=10)
-
-        # Theme selector with available themes
-        available_themes = self.theme_manager.get_available_themes()
-
-        self.theme_selector = ctk.CTkOptionMenu(
-            self.header,
-            values=available_themes if available_themes else ["default"],
-            command=self.change_theme,
-            width=150,
-        )
-
-        current_theme = self.theme_manager.current_theme_name
-        if current_theme in available_themes:
-            self.theme_selector.set(current_theme)
-        elif available_themes:
-            self.theme_selector.set(available_themes[0])
-
-        self.theme_selector.pack(side="right", padx=10, pady=10)
-
     def create_footer(self):
         """Create footer with logging console that adapts to theme"""
         if hasattr(self, "footer"):
@@ -593,29 +572,34 @@ class DisconnectomeApp(ctk.CTk):
             self.footer.configure(height=150)
 
     def _init_logging(self):
-        """Initialize logging system"""
+        """Initialize thread-safe logging system"""
         self.log_queue = queue.Queue(maxsize=1000)
         self.logger = logging.getLogger("disconnectome")
         self.logger.setLevel(logging.DEBUG)
         self.logger.handlers.clear()
 
+        # Queue handler for async logging
         queue_handler = QueueHandler(self.log_queue)
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
         queue_handler.setFormatter(formatter)
         self.logger.addHandler(queue_handler)
 
+        # File handler
         rotating_file_handler = RotatingFileHandler(
             "disconnectome.log", maxBytes=5 * 1024 * 1024, backupCount=5
         )
         rotating_file_handler.setFormatter(formatter)
 
+        # Thread-safe Tkinter handler
         mode = ctk.get_appearance_mode()
-        # Map to brightness index (system resolves to light/dark)
-        brightness = 1 if mode == "Dark" else 0  # 0=light, 1=dark
+        brightness = 1 if mode == "Dark" else 0
 
-        self.tkinter_handler = TkinterTextHandler(self.log_textbox, brightness)
+        self.tkinter_handler = ThreadSafeTkinterHandler(
+            self.log_textbox, brightness, max_lines=1000
+        )
         self.tkinter_handler.setFormatter(formatter)
 
+        # Queue listener
         self.queue_listener = QueueListener(
             self.log_queue,
             rotating_file_handler,
@@ -626,8 +610,18 @@ class DisconnectomeApp(ctk.CTk):
 
     def on_closing(self):
         """Clean up resources before closing"""
+        # Cancel all tasks
+        self.task_manager.cancel_all()
+
+        # Shutdown GUI executor
+        self.gui_executor.shutdown()
+
+        # Stop logging
         self.queue_listener.stop()
+
+        # Clean up state
         self.state_manager.unsubscribe(self.on_state_changed)
+
         self.destroy()
 
     def _show_screen(self, screen_class, *args):
@@ -658,22 +652,6 @@ class DisconnectomeApp(ctk.CTk):
 
         # Update header
         self.header.configure(fg_color=theme["CTkFrame"]["fg_color"])
-
-        # Update appearance menu
-        self.appearance_menu.configure(
-            fg_color=theme["CTkOptionMenu"]["fg_color"],
-            button_color=theme["CTkOptionMenu"]["button_color"],
-            button_hover_color=theme["CTkOptionMenu"]["button_hover_color"],
-            text_color=theme["CTkOptionMenu"]["text_color"],
-        )
-
-        # Update theme selector
-        self.theme_selector.configure(
-            fg_color=theme["CTkOptionMenu"]["fg_color"],
-            button_color=theme["CTkOptionMenu"]["button_color"],
-            button_hover_color=theme["CTkOptionMenu"]["button_hover_color"],
-            text_color=theme["CTkOptionMenu"]["text_color"],
-        )
 
         # Update buttons
         update_widgets_theme(

@@ -14,11 +14,18 @@ from pathlib import Path
 from typing import Optional, Callable, Dict, List
 import urllib.request
 import urllib.error
-import zipfile
 import tarfile
+import zipfile
 import shutil
+import tempfile
 
 logger = logging.getLogger("disconnectome")
+
+
+class DataDownloadError(Exception):
+    """Custom exception for data download errors"""
+
+    pass
 
 
 class DataDownloader:
@@ -27,12 +34,12 @@ class DataDownloader:
     """
 
     # Configuration for data sources
-    # You'll update these URLs to point to your actual data hosting
+    # IMPORTANT: Update these URLs to point to your actual data hosting
     DATA_SOURCES = {
         "controls": {
             "url": "https://your-server.edu/disconnectome/controls.tar.gz",
-            "md5": "78d1353481151aeaec8d5d0c74b3ab89",  # MD5 hash for verification
-            "size_mb": 500,  # Approximate size for progress display
+            "md5": "78d1353481151aeaec8d5d0c74b3ab89",
+            "size_mb": 500,
             "required": True,
             "description": "Control subject tractography data",
         },
@@ -109,6 +116,64 @@ class DataDownloader:
             if config["required"] and not status.get(name, False)
         ]
 
+    def validate_url(self, url: str, package_name: str) -> bool:
+        """
+        Validate that URL is accessible and returns expected content
+
+        Args:
+            url: URL to validate
+            package_name: Package name for logging
+
+        Returns:
+            True if URL is valid
+
+        Raises:
+            DataDownloadError: If URL is invalid
+        """
+        try:
+            # Send HEAD request to check if URL exists
+            request = urllib.request.Request(url, method="HEAD")
+            with urllib.request.urlopen(request, timeout=10) as response:
+                # Check status code
+                if response.status != 200:
+                    raise DataDownloadError(
+                        f"URL returned status {response.status}: {url}"
+                    )
+
+                # Check content type
+                content_type = response.headers.get("Content-Type", "")
+
+                # Valid archive content types
+                valid_types = [
+                    "application/gzip",
+                    "application/x-gzip",
+                    "application/x-tar",
+                    "application/x-compressed-tar",
+                    "application/zip",
+                    "application/octet-stream",  # Generic binary
+                ]
+
+                if not any(t in content_type for t in valid_types):
+                    logger.warning(
+                        f"Unexpected content type for {package_name}: {content_type}"
+                    )
+                    logger.warning("Proceeding anyway, but download may fail")
+
+                # Check content length
+                content_length = response.headers.get("Content-Length")
+                if content_length:
+                    size_mb = int(content_length) / (1024 * 1024)
+                    logger.info(f"{package_name} size: {size_mb:.1f} MB")
+
+                return True
+
+        except urllib.error.HTTPError as e:
+            raise DataDownloadError(f"HTTP error {e.code} accessing {url}: {e.reason}")
+        except urllib.error.URLError as e:
+            raise DataDownloadError(f"Failed to reach server at {url}: {e.reason}")
+        except Exception as e:
+            raise DataDownloadError(f"Failed to validate URL {url}: {e}")
+
     def download_package(
         self,
         package_name: str,
@@ -129,42 +194,153 @@ class DataDownloader:
             return False
 
         config = self.DATA_SOURCES[package_name]
+        url = config["url"]
         self.progress_callback = progress_callback
 
         try:
-            # Download
-            logger.info(f"Downloading {package_name} from {config['url']}")
-            archive_path = self._download_file(
-                config["url"], package_name, config["size_mb"]
-            )
+            # Validate URL before attempting download
+            logger.info(f"Validating URL for {package_name}...")
+            try:
+                self.validate_url(url, package_name)
+            except DataDownloadError as e:
+                logger.error(f"URL validation failed: {e}")
+                logger.error(f"Please check that the URL is correct: {url}")
+                logger.error(
+                    f"Current DATA_SOURCES configuration may have placeholder URLs"
+                )
+                return False
 
-            # Verify
+            # Download
+            logger.info(f"Downloading {package_name} from {url}")
+            archive_path = self._download_file(url, package_name, config["size_mb"])
+
+            # Verify file was downloaded and is not empty
+            if not archive_path.exists():
+                raise DataDownloadError(f"Download file not found: {archive_path}")
+
+            file_size = archive_path.stat().st_size
+            if file_size < 1024:  # Less than 1KB is suspicious
+                # Read first few bytes to check if it's HTML error page
+                with open(archive_path, "rb") as f:
+                    first_bytes = f.read(512)
+                    if (
+                        b"<html" in first_bytes.lower()
+                        or b"<!doctype" in first_bytes.lower()
+                    ):
+                        raise DataDownloadError(
+                            f"Downloaded file appears to be an HTML error page, not data. "
+                            f"URL may be incorrect: {url}"
+                        )
+
+                raise DataDownloadError(
+                    f"Downloaded file is suspiciously small ({file_size} bytes). "
+                    f"Download may have failed."
+                )
+
+            logger.info(f"Downloaded {file_size / (1024 * 1024):.1f} MB")
+
+            # Verify MD5 if provided
             if config.get("md5"):
                 logger.info(f"Verifying {package_name}...")
                 if not self._verify_md5(archive_path, config["md5"]):
                     logger.error(f"MD5 verification failed for {package_name}")
-                    return False
+                    logger.error("This could mean:")
+                    logger.error("1. The download was corrupted")
+                    logger.error("2. The file was modified")
+                    logger.error("3. The MD5 hash in DATA_SOURCES is incorrect")
+
+                    # Ask user if they want to proceed anyway
+                    logger.warning("Proceeding with extraction anyway...")
+            else:
+                logger.warning(
+                    f"No MD5 hash provided for {package_name}, skipping verification"
+                )
+
+            # Detect archive format
+            archive_format = self._detect_archive_format(archive_path)
+            if not archive_format:
+                raise DataDownloadError(
+                    f"Unknown archive format: {archive_path}. "
+                    f"Expected .tar.gz or .zip file."
+                )
+
+            logger.info(f"Detected archive format: {archive_format}")
 
             # Extract
             logger.info(f"Extracting {package_name}...")
-            if not self._extract_archive(archive_path, package_name):
+            if not self._extract_archive(archive_path, package_name, archive_format):
                 return False
+
+            # Verify extraction
+            extract_dir = self.data_dir / package_name
+            if not extract_dir.exists() or not any(extract_dir.iterdir()):
+                raise DataDownloadError(
+                    f"Extraction appears to have failed - directory is empty: {extract_dir}"
+                )
 
             # Create marker file
             marker_file = self.data_dir / f".{package_name}.installed"
             marker_file.write_text(
-                json.dumps({"version": "1.0", "installed": True, "url": config["url"]})
+                json.dumps(
+                    {
+                        "version": "1.0",
+                        "installed": True,
+                        "url": url,
+                        "size_bytes": file_size,
+                    }
+                )
             )
 
             # Clean up archive
+            logger.info(f"Cleaning up archive file...")
             archive_path.unlink()
 
             logger.info(f"Successfully installed {package_name}")
             return True
 
+        except DataDownloadError as e:
+            logger.error(f"Data download error for {package_name}: {e}")
+            return False
         except Exception as e:
             logger.error(f"Failed to download {package_name}: {e}", exc_info=True)
             return False
+
+    def _detect_archive_format(self, archive_path: Path) -> Optional[str]:
+        """
+        Detect archive format by examining file signature (magic bytes)
+
+        Args:
+            archive_path: Path to archive file
+
+        Returns:
+            'tar.gz', 'zip', or None if unknown
+        """
+        with open(archive_path, "rb") as f:
+            header = f.read(10)
+
+        # Check for gzip signature (used by .tar.gz)
+        if header[:2] == b"\x1f\x8b":
+            return "tar.gz"
+
+        # Check for ZIP signature
+        if header[:4] == b"PK\x03\x04" or header[:4] == b"PK\x05\x06":
+            return "zip"
+
+        # Check for uncompressed tar signature
+        if b"ustar" in header:
+            return "tar"
+
+        # If we can't detect, try based on filename
+        if archive_path.name.endswith(".tar.gz") or archive_path.name.endswith(".tgz"):
+            logger.warning(
+                "Could not detect .tar.gz signature, but filename suggests tar.gz"
+            )
+            return "tar.gz"
+        elif archive_path.name.endswith(".zip"):
+            logger.warning("Could not detect .zip signature, but filename suggests zip")
+            return "zip"
+
+        return None
 
     def _download_file(self, url: str, package_name: str, size_mb: int) -> Path:
         """
@@ -196,39 +372,49 @@ class DataDownloader:
             urllib.request.urlretrieve(url, output_path, reporthook=report_progress)
             return output_path
 
+        except urllib.error.HTTPError as e:
+            raise DataDownloadError(
+                f"HTTP error {e.code} downloading {url}: {e.reason}"
+            )
         except urllib.error.URLError as e:
-            logger.error(f"Network error downloading {url}: {e}")
-            raise
+            raise DataDownloadError(f"Network error downloading {url}: {e.reason}")
         except Exception as e:
-            logger.error(f"Error downloading {url}: {e}")
-            raise
+            raise DataDownloadError(f"Error downloading {url}: {e}")
 
     def _verify_md5(self, file_path: Path, expected_md5: str) -> bool:
         """Verify file MD5 hash"""
         md5_hash = hashlib.md5()
 
-        with open(file_path, "rb") as f:
-            for chunk in iter(lambda: f.read(8192), b""):
-                md5_hash.update(chunk)
+        try:
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(8192), b""):
+                    md5_hash.update(chunk)
 
-        actual_md5 = md5_hash.hexdigest()
+            actual_md5 = md5_hash.hexdigest()
 
-        if actual_md5 != expected_md5:
-            logger.error(f"MD5 mismatch: expected {expected_md5}, got {actual_md5}")
+            if actual_md5 != expected_md5:
+                logger.error(f"MD5 mismatch:")
+                logger.error(f"  Expected: {expected_md5}")
+                logger.error(f"  Actual:   {actual_md5}")
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to compute MD5: {e}")
             return False
 
-        return True
-
-    def _extract_archive(self, archive_path: Path, package_name: str) -> bool:
+    def _extract_archive(
+        self, archive_path: Path, package_name: str, archive_format: str
+    ) -> bool:
         """Extract archive to data directory"""
         try:
-            # Determine archive type
-            if archive_path.suffix == ".zip":
+            if archive_format == "zip":
                 return self._extract_zip(archive_path, package_name)
-            elif archive_path.suffixes[-2:] == [".tar", ".gz"]:
+            elif archive_format in ("tar.gz", "tar"):
                 return self._extract_targz(archive_path, package_name)
             else:
-                logger.error(f"Unknown archive format: {archive_path}")
+                logger.error(f"Unsupported archive format: {archive_format}")
                 return False
 
         except Exception as e:
@@ -240,20 +426,24 @@ class DataDownloader:
         extract_dir = self.data_dir / package_name
         extract_dir.mkdir(parents=True, exist_ok=True)
 
-        with zipfile.ZipFile(archive_path, "r") as zip_ref:
-            zip_ref.extractall(extract_dir)
-
-        return True
+        try:
+            with zipfile.ZipFile(archive_path, "r") as zip_ref:
+                zip_ref.extractall(extract_dir)
+            return True
+        except zipfile.BadZipFile as e:
+            raise DataDownloadError(f"Invalid ZIP file: {e}")
 
     def _extract_targz(self, archive_path: Path, package_name: str) -> bool:
         """Extract tar.gz archive"""
         extract_dir = self.data_dir / package_name
         extract_dir.mkdir(parents=True, exist_ok=True)
 
-        with tarfile.open(archive_path, "r:gz") as tar_ref:
-            tar_ref.extractall(extract_dir)
-
-        return True
+        try:
+            with tarfile.open(archive_path, "r:gz") as tar_ref:
+                tar_ref.extractall(extract_dir)
+            return True
+        except tarfile.TarError as e:
+            raise DataDownloadError(f"Invalid TAR file: {e}")
 
     def download_all_required(
         self, progress_callback: Optional[Callable[[str, int, int], None]] = None
@@ -344,65 +534,3 @@ class DataDownloader:
         except Exception as e:
             logger.error(f"Failed to uninstall {package_name}: {e}")
             return False
-
-
-# Alternative hosting options configuration
-class DataSourceConfig:
-    """
-    Examples of different hosting configurations
-    """
-
-    # Option 1: GitHub Releases (Free for public repos)
-    GITHUB_RELEASES = {
-        "controls": {
-            "url": "https://github.com/your-org/disconnectome-data/releases/download/v1.0/controls.tar.gz",
-            "md5": "...",
-            "size_mb": 500,
-            "required": True,
-            "description": "Control subject data",
-        }
-    }
-
-    # Option 2: AWS S3 (Paid but scalable)
-    AWS_S3 = {
-        "controls": {
-            "url": "https://disconnectome-data.s3.amazonaws.com/v1.0/controls.tar.gz",
-            "md5": "...",
-            "size_mb": 500,
-            "required": True,
-            "description": "Control subject data",
-        }
-    }
-
-    # Option 3: Google Drive (Manual setup)
-    GOOGLE_DRIVE = {
-        "controls": {
-            "url": "https://drive.google.com/uc?export=download&id=YOUR_FILE_ID",
-            "md5": "...",
-            "size_mb": 500,
-            "required": True,
-            "description": "Control subject data",
-        }
-    }
-
-    # Option 4: Institutional Server (Best for research)
-    INSTITUTIONAL = {
-        "controls": {
-            "url": "https://data.youruniversity.edu/disconnectome/controls.tar.gz",
-            "md5": "...",
-            "size_mb": 500,
-            "required": True,
-            "description": "Control subject data",
-        }
-    }
-
-    # Option 5: Zenodo (Research data repository - Free and permanent)
-    ZENODO = {
-        "controls": {
-            "url": "https://zenodo.org/record/YOUR_RECORD_ID/files/controls.tar.gz",
-            "md5": "...",
-            "size_mb": 500,
-            "required": True,
-            "description": "Control subject data",
-        }
-    }

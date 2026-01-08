@@ -2,6 +2,8 @@
 
 import logging
 import os
+import threading
+from typing import Callable, Optional
 
 import nibabel as nib
 from dipy.io.streamline import load_trk
@@ -13,7 +15,19 @@ from lib.constants import CONTROL_SPACE, CONTROLS_DIR
 logger = logging.getLogger(__name__)
 
 
-def generateVisitationMap(runs_dir, subject):
+def generateVisitationMap(
+    runs_dir,
+    subject,
+    cancel_event: Optional[threading.Event] = None,
+    progress_callback: Optional[Callable[[float, str], None]] = None,
+):
+    def check_cancelled():
+        return cancel_event and cancel_event.is_set()
+
+    def update_progress(progress: float, message: str):
+        if progress_callback:
+            progress_callback(progress, message)
+
     try:
         runs_path = os.path.join(runs_dir, subject)
         runs_control_space_path = os.path.join(runs_path, CONTROL_SPACE)

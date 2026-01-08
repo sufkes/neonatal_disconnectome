@@ -139,14 +139,26 @@ try:
 except Exception as e:
     print(f"⚠ Warning: Could not collect customtkinter: {e}")
 
-# ✅ FIX: Collect jaraco.text data files
+# ✅ FIX: Collect ALL jaraco packages completely
 try:
-    print("Collecting jaraco.text data files...")
-    jaraco_datas = collect_data_files('jaraco.text')
-    datas += jaraco_datas
-    print(f"✅ Collected jaraco.text: {len(jaraco_datas)} data files")
+    print("Collecting jaraco packages (complete)...")
+
+    # Collect everything from jaraco namespace
+    jaraco_ret = collect_all('jaraco')
+    datas += jaraco_ret[0]
+    binaries += jaraco_ret[1]
+    hiddenimports += jaraco_ret[2]
+
+    # Specifically ensure jaraco.text is complete
+    jaraco_text_ret = collect_all('jaraco.text')
+    datas += jaraco_text_ret[0]
+    binaries += jaraco_text_ret[1]
+    hiddenimports += jaraco_text_ret[2]
+
+    print(f"✅ Collected jaraco: {len(jaraco_ret[0])} data files")
+    print(f"✅ Collected jaraco.text: {len(jaraco_text_ret[0])} data files")
 except Exception as e:
-    print(f"⚠️  Warning: Could not collect jaraco.text data: {e}")
+    print(f"⚠️  Warning: Could not collect jaraco packages: {e}")
 
 # ANTsPyx - can be large, collect selectively
 try:

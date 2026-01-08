@@ -11,6 +11,7 @@ import threading
 from lib.gui_utils import update_widgets_theme
 from lib.makeThumbnails import plotThreeView
 from lib.constants import THUMBNAIL_BRAIN_IMAGE, THUMBNAILS_DIR
+from lib.threading_utils import TaskResult, TaskStatus
 from .loading_overlay import LoadingOverlay
 from lib.theme_manager import ThemeableFrame
 
@@ -23,9 +24,20 @@ class WarpForm(ThemeableFrame):
         self.app = app
         self.state_manager = app.state_manager if app else None
 
+        # Get task manager from app
+        self.task_manager = app.task_manager if app else None
+
+        self.gui_executor = app.gui_executor if app else None
+
         self.grid_columnconfigure(0, weight=1)
 
-        self.loading_overlay = LoadingOverlay(master=self)
+        # Loading overlay WITH cancel callback
+        self.loading_overlay = LoadingOverlay(
+            master=self, on_cancel=self.cancel_processing
+        )
+
+        # Store current task ID
+        self.current_task_id = None
 
         row_index = 0
 
@@ -294,7 +306,11 @@ class WarpForm(ThemeableFrame):
                 try:
                     outpath = os.path.join(THUMBNAILS_DIR, THUMBNAIL_BRAIN_IMAGE)
                     plotThreeView(path, outpath)
-                    self.after(0, self._load_thumbnail_if_exists)
+                    if self.gui_executor:
+                        self.gui_executor.submit(self._load_thumbnail_if_exists)
+                    else:
+                        # Fallback if gui_executor not available
+                        self.after(0, self._load_thumbnail_if_exists)
                 except Exception as e:
                     if self.app:
                         self.app.logger.error(f"Thumbnail generation failed: {e}")
@@ -370,103 +386,129 @@ class WarpForm(ThemeableFrame):
             gestational_age=self.gest_age.get(),
         )
 
-    def on_next(self):
-        """Handle next button click"""
-        is_valid, errors = self.validate_form()
+    def cancel_processing(self):
+        """Cancel the current processing task"""
+        if self.current_task_id and self.task_manager:
+            self.app.logger.info(f"Cancelling task: {self.current_task_id}")
+            self.task_manager.cancel_task(self.current_task_id)
 
+    def on_next(self):
+        """Handle next button click using thread-safe task system"""
+        is_valid, errors = self.validate_form()
         if not is_valid:
-            if self.app:
-                self.app.logger.warning(f"Form validation failed: {errors}")
             return
 
-        # Proceed to next step
-        if hasattr(self.app, "show_disconnectome_form"):
-            self.next_button.configure(state="disabled")
-            self.back_button.configure(state="disabled")
+        # Show loading
+        self.loading_overlay.show(
+            status="Warping to Age-Matched Template", detail="Initializing..."
+        )
+        self.set_buttons_enabled(False)
 
-            # Show loading with descriptive status
-            self.loading_overlay.show(
-                status="Warping to Age-Matched Template",
-                detail="This may take several minutes...",
-            )
-
-            # Get values from state manager
-            processing = self.state_manager.get_processing()
-            config = self.state_manager.get_config()
-
-            runs_dir = config.runs_folder
-            subject = processing.subject_id
-            image_type = processing.brain_type
-            moving_image = processing.brain_image_path
-            lesion_image = processing.lesion_mask_path
-            age = processing.gestational_age
-
-            if self.app:
-                self.app.logger.info(
-                    f"Starting Step 1:\n"
-                    f"  runs_dir: {runs_dir}\n"
-                    f"  subject: {subject}\n"
-                    f"  image_type: {image_type}\n"
-                    f"  moving_image: {moving_image}\n"
-                    f"  lesion_image: {lesion_image}\n"
-                    f"  age: {age}"
-                )
-
-            # Run step1 in background thread
-            def run_step1():
-                try:
-                    # Option 1: Use state-based function directly
-                    from backend.logic import step1_from_state
-
-                    success = step1_from_state(processing, config, self.state_manager)
-
-                    self.after(0, lambda: self.on_step1_complete(success))
-                except Exception as e:
-                    if self.app:
-                        self.app.logger.error(f"Step1 failed: {e}", exc_info=True)
-                    self.after(0, lambda: self.on_step1_complete(False))
-
-            threading.Thread(target=run_step1, daemon=True).start()
-            # start polling for state changes
-            self.app.poll_processing_state()
-            # Also poll loading overlay updates
-            self.poll_loading_updates()
-
-    def poll_loading_updates(self):
-        """Update loading overlay with processing details"""
+        # Get state
         processing = self.state_manager.get_processing()
+        config = self.state_manager.get_config()
 
-        if processing.current_step == "step1_running":
-            self.loading_overlay.update_status(
-                detail=processing.current_step_details or "Processing...",
-                progress=processing.step1_progress,
+        # Store task ID for cancellation
+        self.current_task_id = "step1"
+
+        # Define worker function
+        def worker(cancel_event, progress_callback):
+            """
+            Worker function with cancellation and progress support.
+
+            IMPORTANT: This function receives cancel_event and progress_callback
+            from the BackgroundTask, and must pass them down to step1_from_state.
+            """
+
+            # Check for cancellation
+            if cancel_event.is_set():
+                return False
+
+            # Import here to avoid circular imports
+            from backend.logic import step1_from_state
+
+            # Run processing
+            success = step1_from_state(
+                processing,
+                config,
+                self.state_manager,
+                cancel_event=cancel_event,
+                progress_callback=progress_callback,
             )
-            # Continue polling
-            self.after(500, self.poll_loading_updates)
-        elif processing.current_step in ["step1_complete", "step1_failed"]:
-            # Final update
-            if processing.current_step == "step1_complete":
-                self.loading_overlay.update_status(
-                    status="Complete!", detail="", progress=1.0
-                )
 
-    def on_step1_complete(self, success):
-        """Handle completion of step1"""
-        self.loading_overlay.hide()
-        self.next_button.configure(state="normal")
-        self.back_button.configure(state="normal")
+            return success
 
-        if success:
-            # Update state to mark step1 as completed
-            if self.state_manager:
+        # Define completion callback
+        def on_complete(result: TaskResult):
+            """Completion callback (runs on GUI thread)"""
+            self.current_task_id = None
+            self.loading_overlay.hide()
+            self.set_buttons_enabled(True)
+
+            if result.status == TaskStatus.COMPLETED and result.result:
+                # Update state
                 self.state_manager.update_processing(step1_completed=True)
 
-            # Navigate to next screen
-            if self.app:
-                self.app.show_disconnectome_form()
-        else:
-            if self.app:
-                self.app.logger.error("Step1 failed. Please check logs and try again.")
+                # Navigate to next screen
+                if self.app:
+                    self.app.show_disconnectome_form()
+
+            elif result.status == TaskStatus.CANCELLED:
+                self.app.logger.info("Processing was cancelled by user")
+
+                # Show cancellation message
+                from tkinter import messagebox
+
+                messagebox.showinfo(
+                    "Cancelled", "Processing was cancelled by user.", parent=self
+                )
+
+            else:
+                # Handle error
+                error_msg = result.error_message or "Unknown error"
+                self.app.logger.error(f"Step1 failed: {error_msg}")
+
+                # Show error dialog
+                from tkinter import messagebox
+
+                messagebox.showerror(
+                    "Processing Failed",
+                    f"Step 1 failed: {error_msg}\n\nCheck logs for details.",
+                    parent=self,
+                )
+
+        # Define progress callback
+        def on_progress(progress: float, message: str):
+            """
+            Progress callback (runs on GUI thread).
+
+            This is called by BackgroundTask.update_progress() which is called
+            by the worker function's progress_callback parameter.
+            """
+            self.loading_overlay.update_status(detail=message, progress=progress)
+
+        # Create and start task
+        try:
+            task = self.task_manager.create_task(
+                task_id=self.current_task_id,
+                worker_func=worker,
+                on_progress=on_progress,
+                on_complete=on_complete,
+            )
+
+            self.task_manager.start_task(self.current_task_id)
+
+        except Exception as e:
+            self.current_task_id = None
+            self.loading_overlay.hide()
+            self.set_buttons_enabled(True)
+            self.app.logger.error(f"Failed to start task: {e}", exc_info=True)
+
+    def set_buttons_enabled(self, enabled: bool):
+        """Enable/disable navigation buttons"""
+        state = "normal" if enabled else "disabled"
+        self.back_button.configure(state=state)
+        self.next_button.configure(state=state)
 
     def go_back(self):
         """Handle back button click"""

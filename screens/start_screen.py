@@ -15,6 +15,9 @@ class StartRunForm(ThemeableFrame):
         self.app = app  # store app reference
         self.state_manager = app.state_manager if app else None
 
+        # Get task manager from app
+        self.task_manager = app.task_manager if app else None
+
         # Main layout configuration
         self.grid_columnconfigure(0, weight=1)  # Make the main layout responsive
 

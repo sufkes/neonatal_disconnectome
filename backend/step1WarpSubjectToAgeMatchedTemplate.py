@@ -1,5 +1,7 @@
 import logging
 import os
+import threading
+from typing import Callable, Optional
 import ants
 
 from lib.constants import (
@@ -18,14 +20,33 @@ logger = logging.getLogger(__name__)
 
 # Age between 28-44 discrete
 def warpSubjectToAgeMatchedTemplate(
-    runs_dir, subject, image_type, moving_image, lesion_image, age
+    runs_dir,
+    subject,
+    image_type,
+    moving_image,
+    lesion_image,
+    age,
+    cancel_event: Optional[threading.Event] = None,
+    progress_callback: Optional[Callable[[float, str], None]] = None,
 ):
+    def check_cancelled():
+        return cancel_event and cancel_event.is_set()
+
+    def update_progress(progress: float, message: str):
+        if progress_callback:
+            progress_callback(progress, message)
+
     try:
+        update_progress(0.0, "Setting up directories")
         ## 1. Create the template space runs directory structure to store result
         out_dir = createTemplateSpaceDirectory(age, runs_dir, subject)
 
-        ## 2. Set file paths for inputs
+        if check_cancelled():
+            logger.info("Warp cancelled during setup")
+            return False
 
+        ## 2. Set file paths for inputs
+        update_progress(0.05, "Loading template and input images")
         # Path to age-matched template image (the "fixed" image).
         fixed_path = os.path.join(
             TEMPLATE_TEMPLATES_DIR, "week" + age + "_" + image_type + ".nii.gz"
@@ -53,6 +74,14 @@ def warpSubjectToAgeMatchedTemplate(
         else:
             logger.info("ANTsImage Objects read successfully")
 
+        if check_cancelled():
+            logger.info("Warp cancelled after loading images")
+            return False
+
+        update_progress(
+            0.1, "Calculating registration transform (this is the slowest step)"
+        )
+
         ## 5. Calculate the moving -> fixed transform.
         registration = ants.registration(
             fixed=fixed_ants_img,
@@ -63,19 +92,25 @@ def warpSubjectToAgeMatchedTemplate(
         )
 
         """
-      This will create the following files:
-      <out_prefix>1Warp.nii.gz - The nonlinear part of the moving -> fixed transform
-      <out_prefix>0GenericAffine.mat - The affine part of the moving -> fixed transform
-      <out_prefix>1InverseWarp - The nonlinear part of the fixed -> moving transform (we don't need this)
+          This will create the following files:
+          <out_prefix>1Warp.nii.gz - The nonlinear part of the moving -> fixed transform
+          <out_prefix>0GenericAffine.mat - The affine part of the moving -> fixed transform
+          <out_prefix>1InverseWarp - The nonlinear part of the fixed -> moving transform (we don't need this)
 
-      To perform the moving -> fixed transform, we must apply the affine part first, then the nonlinear part.
-      For the following command (ants.apply_transforms), we input a list of transforms in the reverse order in which they should be applied. I.e. we define a list:
-      transformlist = [<path to last transform>, ..., <path to 2nd transform>, <path to 1st transform>]
+          To perform the moving -> fixed transform, we must apply the affine part first, then the nonlinear part.
+          For the following command (ants.apply_transforms), we input a list of transforms in the reverse order in which they should be applied. I.e. we define a list:
+          transformlist = [<path to last transform>, ..., <path to 2nd transform>, <path to 1st transform>]
 
-      In our case, this transform list will be:
-      transformlist = [<out_prefix>1Warp.nii.gz, <out_prefix>0GenericAffine.mat]
-      This list of transforms has already been calculated in the previous command, so we can simply access it using: transformlist = registration['fwdtransforms']
-    """
+          In our case, this transform list will be:
+          transformlist = [<out_prefix>1Warp.nii.gz, <out_prefix>0GenericAffine.mat]
+          This list of transforms has already been calculated in the previous command, so we can simply access it using: transformlist = registration['fwdtransforms']
+        """
+
+        if check_cancelled():
+            logger.info("Warp cancelled after registration")
+            return False
+
+        update_progress(0.7, "Applying transformation to brain image")
 
         ## 6. Apply the transform to the moving image, and its corresponding lesion mask.
 
@@ -89,6 +124,13 @@ def warpSubjectToAgeMatchedTemplate(
             transformlist=registration["fwdtransforms"],
             verbose=False,
         )
+
+        if check_cancelled():
+            logger.info("Warp cancelled after brain transform")
+            return False
+
+        update_progress(0.8, "Applying transformation to lesion mask")
+
         warped_lesion = ants.apply_transforms(
             fixed=fixed_ants_img,
             moving=lesion_ants_img,
@@ -96,25 +138,44 @@ def warpSubjectToAgeMatchedTemplate(
             verbose=False,
         )
 
+        if check_cancelled():
+            logger.info("Warp cancelled after lesion transform")
+            return False
+
+        update_progress(0.85, "Saving warped images")
+
         ## 7. Save the warped image to NIFTI.
         ants.image_write(warped_image, out_image_path)
         ants.image_write(warped_lesion, out_lesion_path)
 
-        ## 8. Generate the thumbnails and save them
+        if check_cancelled():
+            logger.info("Warp cancelled before thumbnail generation")
+            return False
 
+        update_progress(0.9, "Generating thumbnails")
+
+        ## 8. Generate the thumbnails and save them
         thumbnail_dir = os.path.join(runs_dir, subject, THUMBNAILS)
 
         full_file_name = os.path.join(thumbnail_dir, THUMBNAIL_ALIGNED_PAIR)
         plotAlignedImagePair(out_image_path, fixed_path, full_file_name)
 
+        if check_cancelled():
+            return False
+
         full_file_name = os.path.join(thumbnail_dir, THUMBNAIL_LESION_TEMPLATE)
         plotLabelClustersOnBackground(out_lesion_path, fixed_path, full_file_name)
+
+        if check_cancelled():
+            return False
 
         full_file_name = os.path.join(thumbnail_dir, THUMBNAIL_LESION_ORIGINAL)
         plotLabelClustersOnBackground(lesion_image, moving_image, full_file_name)
 
+        update_progress(1.0, "Warp complete")
+
+        return True
+
     except Exception as e:
         logger.error("Warp subject to age matched template failed")
         raise e
-    else:
-        return True
