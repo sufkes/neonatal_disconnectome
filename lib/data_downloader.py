@@ -17,7 +17,6 @@ import urllib.error
 import tarfile
 import zipfile
 import shutil
-import tempfile
 
 logger = logging.getLogger("disconnectome")
 
@@ -37,15 +36,15 @@ class DataDownloader:
     # IMPORTANT: Update these URLs to point to your actual data hosting
     DATA_SOURCES = {
         "controls": {
-            "url": "https://your-server.edu/disconnectome/controls.tar.gz",
-            "md5": "78d1353481151aeaec8d5d0c74b3ab89",
-            "size_mb": 500,
+            "url": "https://zenodo.org/records/17981084/files/controls.tar.gz",
+            "md5": "e54c8ba24cdaf270c5648bc80d49772f",
+            "size_mb": 5600,
             "required": True,
             "description": "Control subject tractography data",
         },
         "template": {
-            "url": "https://your-server.edu/disconnectome/template.tar.gz",
-            "md5": "e82bcba92123638b001efe6353df62c0",
+            "url": "https://zenodo.org/records/17981084/files/template.tar.gz",
+            "md5": "ffe38e88d44d01262bf8262a4ed5282a",
             "size_mb": 3000,
             "required": True,
             "description": "dHCP brain templates (28-44 weeks) and warps",
@@ -423,24 +422,70 @@ class DataDownloader:
 
     def _extract_zip(self, archive_path: Path, package_name: str) -> bool:
         """Extract ZIP archive"""
-        extract_dir = self.data_dir / package_name
+        extract_dir = self.data_dir
         extract_dir.mkdir(parents=True, exist_ok=True)
 
         try:
             with zipfile.ZipFile(archive_path, "r") as zip_ref:
-                zip_ref.extractall(extract_dir)
+                # Get all members
+                members = zip_ref.namelist()
+
+                # Check if archive has a single top-level directory
+                top_level_dirs = set()
+                for member in members:
+                    parts = member.split("/")
+                    if len(parts) > 0:
+                        top_level_dirs.add(parts[0])
+
+                # ✅ If archive contains "data/controls/..." structure, strip "data/"
+                if len(top_level_dirs) == 1 and "data" in top_level_dirs:
+                    # Extract and rename
+                    for member in members:
+                        if member.startswith("data/"):
+                            new_name = member[5:]  # Remove "data/"
+                            if new_name and not new_name.endswith("/"):
+                                source = zip_ref.open(member)
+                                target_path = extract_dir / new_name
+                                target_path.parent.mkdir(parents=True, exist_ok=True)
+                                with open(target_path, "wb") as target:
+                                    target.write(source.read())
+                else:
+                    # Extract normally
+                    zip_ref.extractall(extract_dir)
             return True
         except zipfile.BadZipFile as e:
             raise DataDownloadError(f"Invalid ZIP file: {e}")
 
     def _extract_targz(self, archive_path: Path, package_name: str) -> bool:
         """Extract tar.gz archive"""
-        extract_dir = self.data_dir / package_name
+        extract_dir = self.data_dir
         extract_dir.mkdir(parents=True, exist_ok=True)
 
         try:
             with tarfile.open(archive_path, "r:gz") as tar_ref:
-                tar_ref.extractall(extract_dir)
+                # Get all members
+                members = tar_ref.getmembers()
+
+                # Check if archive has a single top-level directory
+                top_level_dirs = set()
+                for member in members:
+                    parts = member.name.split("/")
+                    if len(parts) > 0:
+                        top_level_dirs.add(parts[0])
+
+                # ✅ If archive contains "data/controls/..." structure, strip "data/"
+                # ✅ If archive contains just "controls/..." extract as-is
+                if len(top_level_dirs) == 1 and "data" in top_level_dirs:
+                    # Archive has "data/controls/" - strip the "data/" prefix
+                    for member in members:
+                        if member.name.startswith("data/"):
+                            member.name = member.name[5:]  # Remove "data/"
+                            if member.name:  # Skip if now empty
+                                tar_ref.extract(member, extract_dir)
+                else:
+                    # Archive has "controls/" directly - extract as-is
+                    tar_ref.extractall(extract_dir)
+
             return True
         except tarfile.TarError as e:
             raise DataDownloadError(f"Invalid TAR file: {e}")

@@ -33,6 +33,7 @@ share/python-wheels/
 MANIFEST
 *.log
 *.log.*
+*.deb
 
 # Data files
 data/*

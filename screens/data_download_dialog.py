@@ -34,6 +34,7 @@ class DataDownloadDialog(ctk.CTkToplevel):
 
         # Make modal
         self.transient(parent)
+        self.wait_visibility()
         self.grab_set()
 
         # Center on parent
@@ -219,6 +220,8 @@ class DataDownloadDialog(ctk.CTkToplevel):
             # Change button to close
             self.download_button.configure(text="Continue", state="normal")
             self.download_button.configure(command=self.close_dialog)
+
+            self.after(2000, self.close_dialog)
 
         else:
             self.status_label.configure(text="Download failed", text_color="red")

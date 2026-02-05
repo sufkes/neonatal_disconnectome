@@ -18,10 +18,17 @@ if getattr(sys, "frozen", False):
         DATA_ROOT = (
             Path.home() / "Library" / "Application Support" / "Disconnectome" / "data"
         )
+        THUMBNAILS_DIR = (
+            Path.home() / "Library" / "Caches" / "Disconnectome" / "thumbnails"
+        )
     elif sys.platform == "win32":  # Windows
         DATA_ROOT = Path(os.environ.get("APPDATA")) / "Disconnectome" / "data"
+        THUMBNAILS_DIR = (
+            Path(os.environ.get("LOCALAPPDATA")) / "Disconnectome" / "thumbnails"
+        )
     else:  # Linux
         DATA_ROOT = Path.home() / ".local" / "share" / "Disconnectome" / "data"
+        THUMBNAILS_DIR = Path.home() / ".cache" / "Disconnectome" / "thumbnails"
 
     # ✅ FIX: Add error handling with tempfile fallback
     try:
@@ -48,6 +55,7 @@ if getattr(sys, "frozen", False):
 else:
     # Running in development - check for local data first
     PROJECT_ROOT = Path(__file__).parent.parent
+    THUMBNAILS_DIR = PROJECT_ROOT / "thumbnails"
     LOCAL_DATA = PROJECT_ROOT / "data"
 
     # Use local data if it exists and has controls, otherwise use system location
@@ -87,7 +95,8 @@ TEMPLATE_TEMPLATES_DIR = TEMPLATE_DIR / "templates"
 TEMPLATE_WARPS_DIR = TEMPLATE_DIR / "warps-ants"
 CONTROLS_DIR = DATA_ROOT / "controls"
 
-THUMBNAILS_DIR = os.path.join(Path(__file__).parent.parent, "thumbnails")
+THUMBNAILS_DIR.mkdir(parents=True, exist_ok=True)
+logger.info(f"Thumbnails directory: {THUMBNAILS_DIR}")
 
 # Constants for runs directory structure
 THUMBNAILS = "thumbnails"
@@ -106,7 +115,7 @@ THUMBNAIL_DISCONNECTOME = "disconnectome_at_lesion_centroids_0.png"
 # ✅ NEW: Add version information
 __version__ = "1.0.0"
 __build_date__ = "2025-12-18"
-__author__ = "Your Lab Name"
+__author__ = "Steven Ufkes"
 
 # Log final data directory location
 logger.info(f"Data directory configured: {DATA_ROOT}")

@@ -192,6 +192,7 @@ excludes = [
     'numpy.tests',
     'setuptools',
     'distutils',
+    'pkg_resources',
 ]
 
 # ============================================================================

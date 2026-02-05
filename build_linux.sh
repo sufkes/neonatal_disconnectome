@@ -73,6 +73,25 @@ clean_build() {
     print_status "Clean complete"
 }
 
+clean_user_data() {
+    print_status "Cleaning user data directories..."
+
+    # Linux user data locations
+    USER_DATA_DIRS=(
+        "$HOME/.local/share/Disconnectome"
+        "$HOME/.cache/Disconnectome"
+    )
+
+    for dir in "${USER_DATA_DIRS[@]}"; do
+        if [ -d "$dir" ]; then
+            print_warning "Removing: $dir"
+            rm -rf "$dir"
+        fi
+    done
+
+    print_status "User data cleaned"
+}
+
 # Check data directory size
 check_data_size() {
     print_status "Checking data directory sizes..."
@@ -404,6 +423,10 @@ main() {
         clean)
             clean_build
             ;;
+        clean-all)
+            clean_build
+            clean_user_data
+            ;;
         build)
             check_data_size
             create_icon
@@ -430,10 +453,11 @@ main() {
             troubleshoot
             ;;
         *)
-            echo "Usage: $0 [clean|build|both|test|appimage|deb|troubleshoot]"
+            echo "Usage: $0 [clean|clean-all|build|both|test|appimage|deb|troubleshoot]"
             echo ""
             echo "Options:"
             echo "  clean         - Remove build artifacts"
+            echo "  clean-all     - Remove build artifacts AND user data"
             echo "  build         - Build the application"
             echo "  both          - Clean then build (default)"
             echo "  test          - Test the built application"

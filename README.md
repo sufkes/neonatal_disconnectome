@@ -589,7 +589,7 @@ disconnectome/
 ├── themes/                     # CustomTkinter theme files
 │   ├── blue.json
 │   ├── teal.json
-│   └── macos_graphite.json
+│   └── graphite.json
 ├── requirements.txt            # Python dependencies
 ├── Disconnectome.spec          # PyInstaller specification
 ├── app_icon.png                # Logo for the application

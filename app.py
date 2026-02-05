@@ -946,6 +946,8 @@ class DisconnectomeApp(ctk.CTk):
         # Enable any features that were disabled
         # For example, if you disabled the start button:
         # self.start_button.configure(state="normal")
+        self.logger.info("Data ready - showing start screen")
+        self.show_start_form()
 
     def show_download_failure_dialog(self):
         """Show dialog when download fails"""
@@ -1011,6 +1013,11 @@ class DisconnectomeApp(ctk.CTk):
             label="Change Data Location...", command=self.change_data_location
         )
         data_menu.add_command(label="Open Data Folder", command=self.open_data_folder)
+
+        data_menu.add_separator()
+        data_menu.add_command(
+            label="Reset All Data (Delete Downloads)", command=self.reset_all_data
+        )
 
         menubar.add_cascade(label="Data", menu=data_menu)
 
@@ -1302,6 +1309,45 @@ class DisconnectomeApp(ctk.CTk):
         self.data_downloader.data_dir.mkdir(parents=True, exist_ok=True)
 
         open_in_file_browser(data_path)
+
+    def reset_all_data(self):
+        """Reset all downloaded data (for development/testing)"""
+        from tkinter import messagebox
+
+        response = messagebox.askyesno(
+            "Reset All Data",
+            "This will delete all downloaded data files.\n\n"
+            "You will need to re-download them.\n\n"
+            "Are you sure?",
+            parent=self,
+        )
+
+        if response:
+            try:
+                import shutil
+
+                # Remove all data
+                data_path = self.data_downloader.data_dir
+                if data_path.exists():
+                    shutil.rmtree(data_path)
+                    data_path.mkdir(parents=True, exist_ok=True)
+
+                self.logger.info("All data reset successfully")
+
+                messagebox.showinfo(
+                    "Reset Complete",
+                    "All data has been deleted.\n\nYou can now download fresh data.",
+                    parent=self,
+                )
+
+                # Show warning banner again
+                self._show_data_warning_banner()
+
+            except Exception as e:
+                self.logger.error(f"Failed to reset data: {e}")
+                messagebox.showerror(
+                    "Reset Failed", f"Failed to reset data: {e}", parent=self
+                )
 
     def start_a_new_run(self):
         self.logger.info("Starting a new run...")
