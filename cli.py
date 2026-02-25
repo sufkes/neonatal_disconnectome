@@ -1,25 +1,25 @@
-from backend.step1WarpSubjectToAgeMatchedTemplate import warpSubjectToAgeMatchedTemplate
-from backend.step2ApplySubjectLesionToControlImageWarp import (
-    applySubjectLesionToControlImageWarp,
-)
-from backend.step3GenerateVisitationMap import generateVisitationMap
-from backend.step4WarpVisitationMapTo40wTemplate import warpVisitationMap
-from backend.step5MakeDisconnectomeMap import generateDisconnectome
 import click
 import re
+import sys
 
-
-from lib.utils import (
-    createControlSpaceDirectory,
-    createTemplateSpaceDirectory,
-    getRoundedAge,
+from backend.logic import (
+    step1_from_state,
+    step2_from_state,
+    process_warped_lesion_from_state,
 )
+from lib.state_management import ProcessingState, AppConfig
+from lib.data_downloader import DataDownloader
 
 
 @click.group()
 def cli():
     """CLI tool for brain image processing."""
     pass
+
+
+# ============================================================================
+# VALIDATION HELPERS
+# ============================================================================
 
 
 def validate_subjectid(subjectid):
@@ -51,6 +51,100 @@ def clamp_gestational_age(age):
     return age
 
 
+# ============================================================================
+# DATA MANAGEMENT
+# ============================================================================
+
+
+def check_and_download_data(data_dir=None, auto_download=False):
+    """
+    Check that required data files are present.
+    If missing, prompt the user to download them (or download automatically
+    if --auto-download was passed).
+    """
+    downloader = DataDownloader(data_dir=data_dir)
+
+    if downloader.is_fully_installed():
+        click.secho(f"✓ Data files found at: {downloader.data_dir}", fg="green")
+        return
+
+    missing = downloader.get_missing_packages()
+    info = downloader.get_download_info()
+
+    click.secho("\nRequired data files are not installed.", fg="yellow")
+    click.echo(f"  Missing packages : {', '.join(missing)}")
+    click.echo(f"  Download size    : ~{info['total_size_mb']} MB")
+    click.echo(f"  Install location : {downloader.data_dir}\n")
+
+    if not auto_download:
+        if not sys.stdin.isatty():
+            click.secho(
+                "Non-interactive session detected and data is missing. "
+                "Re-run with --auto-download to download automatically.",
+                fg="red",
+                err=True,
+            )
+            raise click.Abort()
+
+        if not click.confirm("Download required data now?"):
+            click.secho(
+                "Cannot proceed without data files. Exiting.", fg="red", err=True
+            )
+            raise click.Abort()
+
+    def _progress(filename, done, total):
+        if total > 0:
+            pct = int(done / total * 100)
+            bar_len = 30
+            filled = int(bar_len * done / total)
+            bar = "█" * filled + "░" * (bar_len - filled)
+            click.echo(f"\r  [{bar}] {pct:3d}%  {filename}", nl=False)
+
+    click.secho("Downloading data files…", fg="blue")
+    success = downloader.download_all_required(progress_callback=_progress)
+    click.echo()
+
+    if not success:
+        click.secho(
+            "Download failed. Check your network connection and try again.",
+            fg="red",
+            err=True,
+        )
+        raise click.Abort()
+
+    click.secho("✓ Data files downloaded successfully.\n", fg="green")
+
+
+# ============================================================================
+# SHARED OPTIONS
+# ============================================================================
+
+
+def data_options(f):
+    """Decorator that adds --data-dir and --auto-download to any command."""
+    f = click.option(
+        "--auto-download",
+        is_flag=True,
+        default=False,
+        help="Download required data without prompting (useful for scripted/HPC use).",
+    )(f)
+    f = click.option(
+        "--data-dir",
+        type=click.Path(file_okay=False, dir_okay=True),
+        default=None,
+        help=(
+            "Override the default data directory. "
+            "Useful on shared systems where data already exists on a network mount."
+        ),
+    )(f)
+    return f
+
+
+# ============================================================================
+# COMMANDS
+# ============================================================================
+
+
 @cli.command()
 @click.option(
     "--runsfolder",
@@ -61,7 +155,7 @@ def clamp_gestational_age(age):
 @click.option(
     "--warped/--not-warped",
     default=False,
-    help="Specify whether the image data is warped.",
+    help="Specify whether the lesion mask is already warped to a dHCP template.",
 )
 @click.option(
     "--subjectid",
@@ -84,8 +178,8 @@ def clamp_gestational_age(age):
 @click.option(
     "--subject-brain-image",
     type=click.Path(exists=True, file_okay=True, dir_okay=False),
-    required=True,
-    help="Path to the subject brain image file.",
+    default=None,
+    help="Path to the subject brain image file. Required when --not-warped.",
 )
 @click.option(
     "--lesion-mask",
@@ -93,6 +187,7 @@ def clamp_gestational_age(age):
     required=True,
     help="Path to the lesion mask file.",
 )
+@data_options
 def start(
     runsfolder,
     warped,
@@ -101,71 +196,79 @@ def start(
     brain_image_type,
     subject_brain_image,
     lesion_mask,
+    data_dir,
+    auto_download,
 ):
     """
-    Process brain imaging data, with conditional arguments based on warped flag.
+    Process brain imaging data.
+
+    Use --not-warped (default) for a full pipeline starting from the raw
+    subject brain image. Use --warped when the lesion mask has already been
+    registered to a dHCP template and you want to skip straight to
+    disconnectome generation.
     """
+    # ---- data check first ----
+    check_and_download_data(data_dir=data_dir, auto_download=auto_download)
+
+    # ---- input validation ----
     subjectid = validate_subjectid(subjectid)
     gestational_age = clamp_gestational_age(gestational_age)
 
-    # Conditional validation based on warped flag
-    if warped:
-        # Only subjectid, lesion_mask, and gestational_age required - already checked lesion_mask required by decorator
-        if any([runsfolder, brain_image_type, subject_brain_image]):
-            click.secho(
-                "Warning: When --warped is set, other options except --subjectid, --lesion-mask, and --gestational-age are ignored.",
-                fg="yellow",
-                err=True,
-            )
-    else:
-        # Not warped, brain_image_type, runsfolder, subject_brain_image required
-        missing = []
-        if runsfolder is None:
-            missing.append("--runsfolder")
-        if brain_image_type is None:
-            missing.append("--brain-image-type")
-        if subject_brain_image is None:
-            missing.append("--subject-brain-image")
-        if missing:
-            click.secho(
-                f"Error: Missing required options for not warped run: {', '.join(missing)}",
-                fg="red",
-                err=True,
-            )
-            raise click.Abort()
+    if not warped and subject_brain_image is None:
+        click.secho(
+            "Error: --subject-brain-image is required when running --not-warped.",
+            fg="red",
+            err=True,
+        )
+        raise click.Abort()
 
-    click.echo("Received arguments:")
-    click.echo(f"Runs folder: {runsfolder}")
-    click.echo(f"Warped: {warped}")
-    click.echo(f"Subject ID: {subjectid}")
-    click.echo(f"Gestational Age: {gestational_age} weeks")
-    click.echo(f"Brain Image Type: {brain_image_type}")
-    click.echo(f"Subject Brain Image: {subject_brain_image}")
-    click.echo(f"Lesion Mask: {lesion_mask}")
+    # ---- build state objects (backend interface) ----
+    config = AppConfig(runs_folder=runsfolder)
 
-    roundedAge = getRoundedAge(gestational_age)
-    createControlSpaceDirectory(subjectid, runsfolder)
+    processing = ProcessingState(
+        subject_id=subjectid,
+        brain_type=brain_image_type,
+        lesion_mask_path=lesion_mask,
+        lesion_already_warped=warped,
+    )
 
     if warped:
-        click.secho("Generating disconnectome.", fg="blue")
-        createTemplateSpaceDirectory(roundedAge, runsfolder, subjectid)
-        applySubjectLesionToControlImageWarp(
-            runsfolder, subjectid, lesion_mask, roundedAge, skip=True
-        )
-        generateVisitationMap(runsfolder, subjectid)
-        warpVisitationMap(runsfolder, subjectid, brain_image_type)
-        generateDisconnectome(runsfolder, subjectid, brain_image_type, None, 0)
+        # template_age is what process_warped_lesion_from_state uses
+        processing.template_age = str(gestational_age)
     else:
-        click.secho("Warping subject to age matched template.", fg="blue")
-        warpSubjectToAgeMatchedTemplate(
-            runsfolder,
-            subjectid,
-            brain_image_type,
-            subject_brain_image,
-            lesion_mask,
-            roundedAge,
-            None,
+        processing.gestational_age = str(gestational_age)
+        processing.brain_image_path = subject_brain_image
+
+    click.echo("Parameters:")
+    click.echo(f"  Runs folder        : {runsfolder}")
+    click.echo(f"  Warped             : {warped}")
+    click.echo(f"  Subject ID         : {subjectid}")
+    click.echo(f"  Gestational Age    : {gestational_age} weeks")
+    click.echo(f"  Brain Image Type   : {brain_image_type}")
+    click.echo(f"  Subject Brain Image: {subject_brain_image}")
+    click.echo(f"  Lesion Mask        : {lesion_mask}")
+
+    # ---- dispatch to backend ----
+    if warped:
+        click.secho("Running warped-lesion pipeline…", fg="blue")
+        success = process_warped_lesion_from_state(
+            processing,
+            config,
+            progress_callback=lambda p, m: click.echo(f"  [{int(p * 100):3d}%] {m}"),
         )
+    else:
+        click.secho(
+            "Running full pipeline (step 1: warp to age-matched template)…", fg="blue"
+        )
+        success = step1_from_state(
+            processing,
+            config,
+            progress_callback=lambda p, m: click.echo(f"  [{int(p * 100):3d}%] {m}"),
+        )
+
+    if not success:
+        click.secho("Processing failed. Check logs for details.", fg="red", err=True)
+        raise SystemExit(1)
 
     click.secho("Processing complete.", fg="green")
 
@@ -201,31 +304,94 @@ def start(
     required=True,
     help="Path to the lesion mask file.",
 )
+@data_options
 def generate_disconnectome(
-    runsfolder, gestational_age, subjectid, brain_image_type, lesion_mask
+    runsfolder,
+    gestational_age,
+    subjectid,
+    brain_image_type,
+    lesion_mask,
+    data_dir,
+    auto_download,
 ):
     """
-    Generate disconnectome from runs folder, subject id, age, image type, and lesion mask.
+    Generate disconnectome from an already-warped runs folder.
+
+    Assumes step 1 (warp to age-matched template) has already been completed
+    and its outputs are present in --runsfolder.
     """
+    # ---- data check first ----
+    check_and_download_data(data_dir=data_dir, auto_download=auto_download)
+
     subjectid = validate_subjectid(subjectid)
     gestational_age = clamp_gestational_age(gestational_age)
 
-    roundedAge = getRoundedAge(gestational_age)
+    # ---- build state objects (backend interface) ----
+    config = AppConfig(runs_folder=runsfolder)
+
+    processing = ProcessingState(
+        subject_id=subjectid,
+        brain_type=brain_image_type,
+        lesion_mask_path=lesion_mask,
+        gestational_age=str(gestational_age),
+        step1_completed=True,  # tell backend step 1 is already done
+    )
 
     click.echo("Generating disconnectome with parameters:")
-    click.echo(f"Runs folder: {runsfolder}")
-    click.echo(f"Gestational Age: {gestational_age}")
-    click.echo(f"Subject ID: {subjectid}")
-    click.echo(f"Brain Image Type: {brain_image_type}")
-    click.echo(f"Lesion Mask: {lesion_mask}")
+    click.echo(f"  Runs folder     : {runsfolder}")
+    click.echo(f"  Gestational Age : {gestational_age}")
+    click.echo(f"  Subject ID      : {subjectid}")
+    click.echo(f"  Brain Image Type: {brain_image_type}")
+    click.echo(f"  Lesion Mask     : {lesion_mask}")
 
-    applySubjectLesionToControlImageWarp(runsfolder, subjectid, lesion_mask, roundedAge)
-    generateVisitationMap(runsfolder, subjectid)
-    warpVisitationMap(runsfolder, subjectid, brain_image_type)
-    generateDisconnectome(runsfolder, subjectid, brain_image_type, None, 0)
+    click.secho("Running disconnectome step (step 2)…", fg="blue")
+    success = step2_from_state(
+        processing,
+        config,
+        progress_callback=lambda p, m: click.echo(f"  [{int(p * 100):3d}%] {m}"),
+    )
 
-    # Placeholder for your disconnectome generation logic
+    if not success:
+        click.secho(
+            "Disconnectome generation failed. Check logs for details.",
+            fg="red",
+            err=True,
+        )
+        raise SystemExit(1)
+
     click.secho("Disconnectome generation complete.", fg="green")
+
+
+@cli.command()
+@data_options
+def check_data(data_dir, auto_download):
+    """
+    Check whether required data files are installed, and optionally download them.
+
+    Useful for verifying or pre-populating data on a new machine before
+    submitting a batch job.
+    """
+    downloader = DataDownloader(data_dir=data_dir)
+    status = downloader.check_installation()
+
+    click.echo(f"\nData directory: {downloader.data_dir}\n")
+    click.echo("Package status:")
+    for package, installed in status.items():
+        config = downloader.DATA_SOURCES[package]
+        indicator = (
+            click.style("✓ installed", fg="green")
+            if installed
+            else click.style("✗ missing", fg="red")
+        )
+        click.echo(f"  {package:<12} ({config['size_mb']} MB)  {indicator}")
+        click.echo(f"               {config['description']}")
+
+    click.echo()
+
+    if not downloader.is_fully_installed():
+        check_and_download_data(data_dir=data_dir, auto_download=auto_download)
+    else:
+        click.secho("All required data is installed.", fg="green")
 
 
 if __name__ == "__main__":

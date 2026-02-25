@@ -1,6 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
 Cross-Platform PyInstaller Spec File for Disconnectome
+Produces two executables in a single COLLECT:
+  - Disconnectome      (GUI, console=False)
+  - disconnectome-cli  (CLI, console=True)
+
 Works on macOS, Windows, and Linux
 """
 
@@ -72,9 +76,22 @@ elif IS_LINUX:
 # HIDDEN IMPORTS
 # ============================================================================
 hiddenimports = [
+    # Click (required by CLI)
+    'click',
+    'click.core',
+    'click.decorators',
+    'click.exceptions',
+    'click.formatting',
+    'click.termui',
+    'click.types',
+    'click.utils',
+
+    # Image / GUI
     'PIL._tkinter_finder',
     'PIL._imagingtk',
     'customtkinter',
+
+    # Science stack
     'scipy',
     'scipy.sparse.csgraph._validation',
     'scipy.special.cython_special',
@@ -86,7 +103,7 @@ hiddenimports = [
     'ants',
     'antspyx',
 
-    # ✅ FIX: Add jaraco imports
+    # jaraco (required by setuptools / pkg_resources)
     'jaraco',
     'jaraco.text',
     'jaraco.functools',
@@ -94,13 +111,13 @@ hiddenimports = [
     'jaraco.collections',
     'jaraco.classes',
 
-    # ✅ FIX: Add jaraco dependencies
+    # jaraco dependencies
     'importlib_metadata',
     'importlib_resources',
     'zipp',
     'more_itertools',
 
-    # ✅ FIX: Add pkg_resources (often the root cause)
+    # pkg_resources
     'pkg_resources',
     'pkg_resources.py2_warn',
 ]
@@ -195,7 +212,7 @@ excludes = [
 ]
 
 # ============================================================================
-# ANALYSIS
+# ANALYSIS — GUI (app.py)
 # ============================================================================
 a = Analysis(
     ['app.py'],
@@ -214,35 +231,58 @@ a = Analysis(
 )
 
 # ============================================================================
+# ANALYSIS — CLI (cli.py)
+# ============================================================================
+a_cli = Analysis(
+    ['cli.py'],
+    pathex=[project_root],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=excludes,
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
+# ============================================================================
 # REMOVE DUPLICATES AND LARGE FILES
 # ============================================================================
-# Remove duplicate files
-seen = set()
-a.datas = [x for x in a.datas if not (x[0] in seen or seen.add(x[0]))]
+def dedup_datas(analysis):
+    seen = set()
+    analysis.datas = [x for x in analysis.datas if not (x[0] in seen or seen.add(x[0]))]
 
-# Remove duplicate binaries
-seen_bin = set()
-a.binaries = [x for x in a.binaries if not (x[0] in seen_bin or seen_bin.add(x[0]))]
+def dedup_binaries(analysis):
+    seen = set()
+    analysis.binaries = [x for x in analysis.binaries if not (x[0] in seen or seen.add(x[0]))]
 
-# Log large files (for debugging)
+for _a in (a_gui, a_cli):
+    dedup_datas(_a)
+    dedup_binaries(_a)
+
+# Log large files
 print("\n" + "="*80)
-print("LARGE FILES (>10MB) BEING INCLUDED:")
+print("LARGE FILES (>10 MB) BEING INCLUDED IN GUI ANALYSIS:")
 print("="*80)
 large_files_found = False
-for dest, src, typ in a.datas:
+for dest, src, typ in a_gui.datas:
     if os.path.exists(src):
         size_mb = os.path.getsize(src) / (1024 * 1024)
         if size_mb > 10:
             print(f"  {size_mb:.1f} MB - {dest}")
             large_files_found = True
-
 if not large_files_found:
     print("  (None found - good!)")
 
 # ============================================================================
 # PYZ (Python Archive)
 # ============================================================================
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz_gui = PYZ(a_gui.pure, a_gui.zipped_data, cipher=block_cipher)
+pyz_cli = PYZ(a_cli.pure, a_cli.zipped_data, cipher=block_cipher)
 
 # ============================================================================
 # PLATFORM-SPECIFIC BUILD CONFIGURATION
@@ -256,30 +296,54 @@ if IS_MACOS:
     print("CONFIGURING macOS BUILD")
     print("="*80)
 
-    exe = EXE(
-        pyz,
-        a.scripts,
+    exe_gui = EXE(
+        pyz_gui,
+        a_gui.scripts,
         [],
         exclude_binaries=True,
         name='Disconnectome',
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
-        upx=False,  # UPX causes issues on macOS
-        console=False,  # No console for production
+        upx=False,
+        console=False,          # GUI — no console window
         disable_windowed_traceback=False,
         argv_emulation=False,
         target_arch=None,
         codesign_identity=None,
         entitlements_file=None,
-        icon='icon.icns' if os.path.exists('icon.icns') else 'app_icon.png'
+        icon='icon.icns' if os.path.exists('icon.icns') else 'app_icon.png',
+    )
+
+    exe_cli = EXE(
+        pyz_cli,
+        a_cli.scripts,
+        [],
+        exclude_binaries=True,
+        name='disconnectome-cli',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=False,
+        console=True,           # CLI — must have console
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+        icon=None,
     )
 
     coll = COLLECT(
-        exe,
-        a.binaries,
-        a.zipfiles,
-        a.datas,
+        exe_gui,
+        exe_cli,
+        a_gui.binaries,
+        a_gui.zipfiles,
+        a_gui.datas,
+        # Merge CLI-only binaries/datas that aren't already in GUI set
+        a_cli.binaries,
+        a_cli.zipfiles,
+        a_cli.datas,
         strip=False,
         upx=False,
         upx_exclude=[],
@@ -317,17 +381,17 @@ elif IS_WINDOWS:
     print("CONFIGURING WINDOWS BUILD")
     print("="*80)
 
-    exe = EXE(
-        pyz,
-        a.scripts,
+    exe_gui = EXE(
+        pyz_gui,
+        a_gui.scripts,
         [],
         exclude_binaries=True,
         name='Disconnectome',
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
-        upx=True,  # UPX works better on Windows
-        console=False,  # No console for production
+        upx=True,
+        console=False,          # GUI — no console window
         disable_windowed_traceback=False,
         argv_emulation=False,
         target_arch=None,
@@ -337,11 +401,34 @@ elif IS_WINDOWS:
         version='version_info.txt' if os.path.exists('version_info.txt') else None,
     )
 
+    exe_cli = EXE(
+        pyz_cli,
+        a_cli.scripts,
+        [],
+        exclude_binaries=True,
+        name='disconnectome-cli',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        console=True,           # CLI — must have console
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+        icon=None,
+    )
+
     coll = COLLECT(
-        exe,
-        a.binaries,
-        a.zipfiles,
-        a.datas,
+        exe_gui,
+        exe_cli,
+        a_gui.binaries,
+        a_gui.zipfiles,
+        a_gui.datas,
+        a_cli.binaries,
+        a_cli.zipfiles,
+        a_cli.datas,
         strip=False,
         upx=True,
         upx_exclude=[],
@@ -356,9 +443,9 @@ elif IS_LINUX:
     print("CONFIGURING LINUX BUILD")
     print("="*80)
 
-    exe = EXE(
-        pyz,
-        a.scripts,
+    exe_gui = EXE(
+        pyz_gui,
+        a_gui.scripts,
         [],
         exclude_binaries=True,
         name='Disconnectome',
@@ -366,7 +453,7 @@ elif IS_LINUX:
         bootloader_ignore_signals=False,
         strip=False,
         upx=True,
-        console=False,  # No console for production
+        console=False,          # GUI — no console window
         disable_windowed_traceback=False,
         argv_emulation=False,
         target_arch=None,
@@ -375,11 +462,34 @@ elif IS_LINUX:
         icon='app_icon.png',
     )
 
+    exe_cli = EXE(
+        pyz_cli,
+        a_cli.scripts,
+        [],
+        exclude_binaries=True,
+        name='disconnectome-cli',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        console=True,           # CLI — must have console
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+        icon=None,
+    )
+
     coll = COLLECT(
-        exe,
-        a.binaries,
-        a.zipfiles,
-        a.datas,
+        exe_gui,
+        exe_cli,
+        a_gui.binaries,
+        a_gui.zipfiles,
+        a_gui.datas,
+        a_cli.binaries,
+        a_cli.zipfiles,
+        a_cli.datas,
         strip=False,
         upx=True,
         upx_exclude=[],
@@ -392,9 +502,16 @@ elif IS_LINUX:
 print("\n" + "="*80)
 print("BUILD CONFIGURATION SUMMARY")
 print("="*80)
-print(f"Platform: {sys.platform}")
-print(f"Data files: {len(a.datas)}")
-print(f"Binary files: {len(a.binaries)}")
-print(f"Python modules: {len(a.pure)}")
-print(f"Hidden imports: {len(hiddenimports)}")
+print(f"Platform          : {sys.platform}")
+print(f"GUI entry point   : app.py  → Disconnectome")
+print(f"CLI entry point   : cli.py  → disconnectome-cli")
+print(f"GUI data files    : {len(a_gui.datas)}")
+print(f"CLI data files    : {len(a_cli.datas)}")
+print(f"GUI binaries      : {len(a_gui.binaries)}")
+print(f"CLI binaries      : {len(a_cli.binaries)}")
+print(f"Hidden imports    : {len(hiddenimports)}")
+print("="*80 + "\n")
+print("Output will be in: dist/Disconnectome/")
+print("  Disconnectome        — launch GUI")
+print("  disconnectome-cli    — run headless / scripted")
 print("="*80 + "\n")

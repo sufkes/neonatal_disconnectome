@@ -50,7 +50,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: DisconnectomeSetup-1.0.0.exe
+          path: DisconnectomeSetup.exe
 
   build-linux:
     runs-on: ubuntu-latest
