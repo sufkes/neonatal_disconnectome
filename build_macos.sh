@@ -141,6 +141,7 @@ build_app() {
 
     if [ $? -eq 0 ]; then
         print_status "Build completed successfully!"
+        configure_ssl_cert_runtime
 
         if [ -d "dist/Disconnectome.app" ]; then
             APP_SIZE=$(du -sh dist/Disconnectome.app | cut -f1)
@@ -151,6 +152,50 @@ build_app() {
         print_error "Build failed. Check build.log for details"
         exit 1
     fi
+}
+
+# Configure bundled app to always use bundled certifi CA bundle
+configure_ssl_cert_runtime() {
+    local app_root="dist/Disconnectome.app/Contents"
+    local cert_file="$app_root/Resources/certifi/cacert.pem"
+    local macos_dir="$app_root/MacOS"
+
+    if [ ! -f "$cert_file" ]; then
+        print_warning "Bundled certifi CA file not found: $cert_file"
+        print_warning "Skipping SSL_CERT_FILE runtime wrapper setup"
+        return 0
+    fi
+
+    create_ssl_wrapper "$macos_dir/Disconnectome"
+    create_ssl_wrapper "$macos_dir/disconnectome-cli"
+
+    print_status "Configured SSL_CERT_FILE runtime wrappers"
+}
+
+# Rename binary to *-bin and add a launcher that exports SSL_CERT_FILE
+create_ssl_wrapper() {
+    local executable_path="$1"
+    local executable_name
+    executable_name="$(basename "$executable_path")"
+    local bin_path="${executable_path}-bin"
+
+    if [ ! -f "$executable_path" ]; then
+        print_warning "Executable not found, skipping wrapper: $executable_path"
+        return 0
+    fi
+
+    mv "$executable_path" "$bin_path"
+
+    cat > "$executable_path" <<EOF
+#!/bin/bash
+set -e
+SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)"
+APP_ROOT="\$(cd "\$SCRIPT_DIR/.." && pwd)"
+export SSL_CERT_FILE="\$APP_ROOT/Resources/certifi/cacert.pem"
+exec "\$APP_ROOT/MacOS/${executable_name}-bin" "\$@"
+EOF
+
+    chmod +x "$executable_path"
 }
 
 # Test the built application

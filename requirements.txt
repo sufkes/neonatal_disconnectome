@@ -10,3 +10,4 @@ pyside6
 click
 customtkinter
 pillow
+certifi
