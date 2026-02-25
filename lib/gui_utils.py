@@ -1,3 +1,6 @@
+import os
+import shlex
+
 import customtkinter as ctk
 from pathlib import Path
 from tkinter import messagebox
@@ -43,7 +46,10 @@ def create_command_display(parent, command, row_start=0):
     command_scroll.grid(row=0, column=0, sticky="ew", padx=2, pady=2)
 
     # Parse and display command parts
-    parts = command.split()
+    try:
+        parts = shlex.split(command, posix=(os.name != "nt"))
+    except ValueError:
+        parts = command.split()
     base_command = parts[0] if parts else ""
 
     # Base command label
@@ -58,7 +64,8 @@ def create_command_display(parent, command, row_start=0):
     # Add clickable path labels
     col = 1
     for i, part in enumerate(parts[1:]):
-        if Path(part).exists():
+        normalized_part = part.strip("\"'")
+        if Path(normalized_part).exists():
             # Clickable file path
             path_label = ctk.CTkLabel(
                 command_scroll,
@@ -79,7 +86,9 @@ def create_command_display(parent, command, row_start=0):
 
             path_label.bind("<Enter>", on_enter)
             path_label.bind("<Leave>", on_leave)
-            path_label.bind("<Button-1>", lambda e, p=part: open_in_file_browser(p))
+            path_label.bind(
+                "<Button-1>", lambda e, p=normalized_part: open_in_file_browser(p)
+            )
 
         else:
             # Non-clickable flag or text

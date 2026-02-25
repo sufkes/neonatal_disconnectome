@@ -6,6 +6,7 @@ from lib.constants import THUMBNAIL_DISCONNECTOME, THUMBNAILS, TEMPLATE_DIR
 from lib.gui_utils import create_command_display, update_widgets_theme
 
 from lib.theme_manager import ThemeableFrame
+from lib.utils import _quote_path
 
 
 class FinalResult(ThemeableFrame):
@@ -130,7 +131,7 @@ class FinalResult(ThemeableFrame):
             "lesion_mask_40-week-template-space-warped.nii.gz",
         )
 
-        command = f"fsleyes {pathTo40WeekTemplateImage} {pathToDisconnectomeMap} -cm red-yellow {pathToLegionMaskIn40WeekTemplateSpace} -cm blue-lightblue"
+        command = f"fsleyes {_quote_path(pathTo40WeekTemplateImage)} {_quote_path(pathToDisconnectomeMap)} -cm red-yellow {_quote_path(pathToLegionMaskIn40WeekTemplateSpace)} -cm blue-lightblue"
 
         return command
 

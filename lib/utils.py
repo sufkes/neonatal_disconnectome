@@ -264,3 +264,7 @@ def thresholdWarpedLesion(
     )
 
     return lesion_in_control_image_space_thresholded
+
+
+def _quote_path(path: str) -> str:
+    return '"' + path.replace('"', '\\"') + '"'

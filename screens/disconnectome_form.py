@@ -5,7 +5,7 @@ from PIL import Image
 from lib.constants import TEMPLATE_DIR, THUMBNAILS
 from lib.gui_utils import update_widgets_theme
 from lib.threading_utils import TaskResult, TaskStatus
-from lib.utils import getRoundedAge
+from lib.utils import _quote_path, getRoundedAge
 from lib.theme_manager import ThemeableFrame
 from .loading_overlay import LoadingOverlay
 
@@ -158,9 +158,7 @@ class DisconnectomeForm(ThemeableFrame):
         pathToAgeMatchedDHCPTemplate = os.path.join(
             TEMPLATE_DIR, "templates", f"week{roundedAge}_{brain_type}.nii.gz"
         )
-        command = (
-            f"fsleyes {pathToAgeMatchedDHCPTemplate} {pathToWarpedSubjectBrainImage}"
-        )
+        command = f"fsleyes {_quote_path(pathToAgeMatchedDHCPTemplate)} {_quote_path(pathToWarpedSubjectBrainImage)}"
         self.create_preview_section(
             tab1,
             image_key="plot_aligned_image_pair",
@@ -170,7 +168,7 @@ class DisconnectomeForm(ThemeableFrame):
 
         # Tab 2
         tab2 = self.tabview.tab("Lesion mask on original subject brain image")
-        command = f"fsleyes {brain_image} {lesion_mask} -cm blue-lightblue"
+        command = f"fsleyes {_quote_path(brain_image)} {_quote_path(lesion_mask)} -cm blue-lightblue"
         self.create_preview_section(
             tab2,
             image_key="lesion_on_original",
@@ -184,7 +182,7 @@ class DisconnectomeForm(ThemeableFrame):
             templateSpacePrefix, "lesion_mask_" + templateSpaceSuffix
         )
 
-        command = f"fsleyes {pathToAgeMatchedDHCPTemplate} {pathToLegionMaskInAgeMatchedTemplateSpace} -cm blue-lightblue"
+        command = f"fsleyes {_quote_path(pathToAgeMatchedDHCPTemplate)} {_quote_path(pathToLegionMaskInAgeMatchedTemplateSpace)} -cm blue-lightblue"
         self.create_preview_section(
             tab3,
             image_key="lesion_on_age_matched_template_clusters",

@@ -147,7 +147,7 @@ def data_options(f):
 
 @cli.command()
 @click.option(
-    "--runsfolder",
+    "-r--runsfolder",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     required=True,
     help="Path to the runs folder.",
@@ -158,30 +158,35 @@ def data_options(f):
     help="Specify whether the lesion mask is already warped to a dHCP template.",
 )
 @click.option(
+    "-s",
     "--subjectid",
     type=str,
     required=True,
     help="Subject identifier (letters, numbers, underscore, dash only).",
 )
 @click.option(
+    "-g",
     "--gestational-age",
     type=float,
     required=True,
     help="Gestational age in weeks (decimal allowed, will be clamped to 28–44).",
 )
 @click.option(
+    "-t",
     "--brain-image-type",
     type=click.Choice(["T1w", "T2w"], case_sensitive=False),
     required=True,
     help="Type of brain image (T1w or T2w).",
 )
 @click.option(
+    "-b",
     "--subject-brain-image",
     type=click.Path(exists=True, file_okay=True, dir_okay=False),
     default=None,
     help="Path to the subject brain image file. Required when --not-warped.",
 )
 @click.option(
+    "-l",
     "--lesion-mask",
     type=click.Path(exists=True, file_okay=True, dir_okay=False),
     required=True,
@@ -275,30 +280,35 @@ def start(
 
 @cli.command()
 @click.option(
+    "-r",
     "--runsfolder",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     required=True,
     help="Path to the runs folder.",
 )
 @click.option(
+    "-g",
     "--gestational-age",
     type=float,
     required=True,
     help="Gestational age in weeks (decimal allowed, clamped to 28–44).",
 )
 @click.option(
+    "-s",
     "--subjectid",
     type=str,
     required=True,
     help="Subject identifier (letters, numbers, underscore, dash only).",
 )
 @click.option(
+    "-t",
     "--brain-image-type",
     type=click.Choice(["T1w", "T2w"], case_sensitive=False),
     required=True,
     help="Type of brain image (T1w or T2w).",
 )
 @click.option(
+    "-l",
     "--lesion-mask",
     type=click.Path(exists=True, file_okay=True, dir_okay=False),
     required=True,
