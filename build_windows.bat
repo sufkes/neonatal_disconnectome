@@ -1,4 +1,6 @@
 @echo off
+REM Set UTF-8 encoding for Python
+set PYTHONIOENCODING=utf-8
 REM Build script for Disconnectome Windows application
 REM Usage: build_windows.bat [clean|build|both]
 

@@ -184,6 +184,9 @@ build_app() {
 create_desktop_file() {
     print_status "Creating .desktop file..."
 
+    # Ensure the directory exists
+    mkdir -p dist/Disconnectome
+
     cat > dist/Disconnectome/disconnectome.desktop << EOF
 [Desktop Entry]
 Version=1.0

@@ -1,4 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
+# Add this to build_windows.bat before running pyinstaller
+set PYTHONIOENCODING=utf-8
 """
 Cross-Platform PyInstaller Spec File for Disconnectome
 Works on macOS, Windows, and Linux
@@ -31,7 +33,6 @@ print(f"{'='*80}\n")
 datas = [
     ('themes/*.json', 'themes'),
     ('app_icon.png', '.'),
-    ('user_settings.json', '.'),
 ]
 
 # Only include necessary template files, not entire data directory
