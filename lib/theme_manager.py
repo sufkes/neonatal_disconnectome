@@ -31,8 +31,11 @@ class ThemeManager:
         self.current_theme_data: dict = {}
         self.observers: list[Callable] = []
 
-        # Ensure themes folder exists
-        Path(themes_folder).mkdir(exist_ok=True)
+        # Only try to create the themes folder in development.
+        # When frozen (AppImage / PyInstaller), themes are already bundled
+        # inside sys._MEIPASS which is read-only — mkdir would crash.
+        if not getattr(sys, "frozen", False):
+            Path(themes_folder).mkdir(exist_ok=True)
 
     def get_available_themes(self) -> list[str]:
         """Get list of available theme names"""
