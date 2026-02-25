@@ -792,7 +792,6 @@ Before releasing to production:
    ```
 
 2. **Draft Release on GitHub:**
-
    - Go to Releases → Draft a new release
    - Select tag `v1.0.0`
    - Add release notes
@@ -834,7 +833,7 @@ Contributions are welcome! Please:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU GENERAL PUBLIC LICENSE - see the [LICENSE](LICENSE) file for details.
 
 ---
 
