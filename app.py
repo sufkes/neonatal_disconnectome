@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 import queue
 from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
 
@@ -578,6 +579,20 @@ class DisconnectomeApp(ctk.CTk):
         self.logger.setLevel(logging.DEBUG)
         self.logger.handlers.clear()
 
+        # Resolve a user-writable log path (works for dev, AppImage, and DEB)
+        if getattr(sys, "frozen", False):
+            if sys.platform == "darwin":
+                log_dir = Path.home() / "Library" / "Logs" / "Disconnectome"
+            elif sys.platform == "win32":
+                log_dir = Path(os.environ.get("APPDATA")) / "Disconnectome" / "logs"
+            else:
+                log_dir = Path.home() / ".local" / "share" / "Disconnectome" / "logs"
+        else:
+            log_dir = Path(__file__).parent  # dev: log next to app.py
+
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = log_dir / "disconnectome.log"
+
         # Queue handler for async logging
         queue_handler = QueueHandler(self.log_queue)
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -586,7 +601,7 @@ class DisconnectomeApp(ctk.CTk):
 
         # File handler
         rotating_file_handler = RotatingFileHandler(
-            "disconnectome.log", maxBytes=5 * 1024 * 1024, backupCount=5
+            log_path, maxBytes=5 * 1024 * 1024, backupCount=5
         )
         rotating_file_handler.setFormatter(formatter)
 

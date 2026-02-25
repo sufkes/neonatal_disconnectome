@@ -323,13 +323,21 @@ create_deb() {
     # Copy application
     cp -r dist/Disconnectome/* "$PKG_DIR/opt/disconnectome/"
 
-    # Create symlink
+    # Create symlink for gui
     cat > "$PKG_DIR/usr/bin/disconnectome" << 'EOF'
 #!/bin/bash
 cd /opt/disconnectome
 exec /opt/disconnectome/Disconnectome "$@"
 EOF
     chmod +x "$PKG_DIR/usr/bin/disconnectome"
+
+    # Create symlink for cli
+    cat > "$PKG_DIR/usr/bin/disconnectome-cli" << 'EOF'
+#!/bin/bash
+cd /opt/disconnectome
+exec /opt/disconnectome/disconnectome-cli "$@"
+EOF
+    chmod +x "$PKG_DIR/usr/bin/disconnectome-cli"
 
     # Copy icon
     if [ -f "app_icon.png" ]; then
