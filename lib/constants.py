@@ -114,7 +114,7 @@ THUMBNAIL_DISCONNECTOME = "disconnectome_at_lesion_centroids_0.png"
 
 # ✅ NEW: Add version information
 __version__ = "1.0.0"
-__build_date__ = "2025-12-18"
+__build_date__ = "2026-02-25"
 __author__ = "Steven Ufkes"
 
 # Log final data directory location
