@@ -3,7 +3,10 @@ name: Build on Version Tag
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
+
+permissions:
+  contents: write
 
 jobs:
   build-macos:
@@ -13,16 +16,30 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Run macOS build
         run: bash build_macos.sh both
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "Disconnectome" \
+            --volicon "app_icon.png" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --text-size 16 \
+            --icon "dist/Disconnectome/Disconnectome.app" 150 190 \
+            --hide-extension "Disconnectome.app" \
+            Disconnectome-macOS.dmg \
+            "dist/"
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macos-build
-          path: dist/
+          name: macos-dmg
+          path: Disconnectome-macOS.dmg
 
   build-windows:
     runs-on: windows-latest
@@ -31,16 +48,22 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Run Windows build
         run: .\build_windows.bat both
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup -y
+      - name: Create Installer
+        run: |
+          iscc /DMyAppVersion=1.0.0 setup.iss
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build
-          path: dist/
+          name: windows-installer
+          path: DisconnectomeSetup-1.0.0.exe
 
   build-linux:
     runs-on: ubuntu-latest
@@ -49,32 +72,46 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: Run Linux build
+      - name: Run Linux build (AppImage + DEB)
         run: bash build_linux.sh both
-      - name: Upload Linux artifacts
+      - name: Upload Linux AppImage
         uses: actions/upload-artifact@v4
         with:
-          name: linux-build
-          path: dist/
+          name: linux-appimage
+          path: Disconnectome-x86_64.AppImage
+      - name: Upload Linux DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb
+          path: disconnectome_1.0.0_amd64.deb
 
   create-release:
     needs: [build-macos, build-windows, build-linux]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      
+
+      - name: List artifacts
+        run: find artifacts -type f
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: |
+            artifacts/macos-dmg/Disconnectome-macOS.dmg
+            artifacts/windows-installer/DisconnectomeSetup-1.0.0.exe
+            artifacts/linux-appimage/Disconnectome-x86_64.AppImage
+            artifacts/linux-deb/disconnectome_1.0.0_amd64.deb
           draft: false
           prerelease: false
         env:

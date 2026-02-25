@@ -442,6 +442,8 @@ main() {
             create_icon
             build_app
             create_desktop_file
+            create_appimage
+            create_deb
             ;;
         test)
             test_app
