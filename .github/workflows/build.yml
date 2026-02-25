@@ -98,7 +98,7 @@ jobs:
         with:
           files: |
             artifacts/macos-dmg/Disconnectome-macOS.dmg
-            artifacts/windows-installer/DisconnectomeSetup-1.0.0.exe
+            artifacts/windows-installer/DisconnectomeSetup.exe
             artifacts/linux-appimage/Disconnectome-x86_64.AppImage
             artifacts/linux-deb/disconnectome_1.0.0_amd64.deb
           draft: false
