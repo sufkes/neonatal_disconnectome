@@ -113,7 +113,7 @@ THUMBNAIL_LESION_TEMPLATE = "lesion_on_age_matched_template_clusters.png"
 THUMBNAIL_DISCONNECTOME = "disconnectome_at_lesion_centroids_0.png"
 
 # ✅ NEW: Add version information
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __build_date__ = "2026-02-25"
 __author__ = "Steven Ufkes"
 
