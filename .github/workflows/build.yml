@@ -22,19 +22,7 @@ jobs:
       - name: Run macOS build
         run: bash build_macos.sh both
       - name: Create DMG
-        run: |
-          brew install create-dmg
-          create-dmg \
-            --volname "Disconnectome" \
-            --volicon "app_icon.png" \
-            --window-pos 200 120 \
-            --window-size 600 400 \
-            --icon-size 100 \
-            --text-size 16 \
-            --icon "dist/Disconnectome/Disconnectome.app" 150 190 \
-            --hide-extension "Disconnectome.app" \
-            Disconnectome-macOS.dmg \
-            "dist/"
+        run: bash build_macos.sh dmg
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -58,7 +46,7 @@ jobs:
           choco install innosetup -y
       - name: Create Installer
         run: |
-          iscc /DMyAppVersion=1.0.0 setup.iss
+          run: .\build_windows.bat installer
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
