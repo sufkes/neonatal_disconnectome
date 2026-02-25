@@ -1,6 +1,4 @@
 # -*- mode: python ; coding: utf-8 -*-
-# Add this to build_windows.bat before running pyinstaller
-set PYTHONIOENCODING=utf-8
 """
 Cross-Platform PyInstaller Spec File for Disconnectome
 Works on macOS, Windows, and Linux
@@ -136,9 +134,9 @@ try:
     datas += tmp_ret[0]
     binaries += tmp_ret[1]
     hiddenimports += tmp_ret[2]
-    print(f"✓ Collected CustomTkinter: {len(tmp_ret[0])} data files, {len(tmp_ret[1])} binaries")
+    print(f"[ok] Collected CustomTkinter: {len(tmp_ret[0])} data files, {len(tmp_ret[1])} binaries")
 except Exception as e:
-    print(f"⚠ Warning: Could not collect customtkinter: {e}")
+    print(f"[!] Warning: Could not collect customtkinter: {e}")
 
 # ✅ FIX: Collect ALL jaraco packages completely
 try:
@@ -156,10 +154,10 @@ try:
     binaries += jaraco_text_ret[1]
     hiddenimports += jaraco_text_ret[2]
 
-    print(f"✅ Collected jaraco: {len(jaraco_ret[0])} data files")
-    print(f"✅ Collected jaraco.text: {len(jaraco_text_ret[0])} data files")
+    print(f"[ok] Collected jaraco: {len(jaraco_ret[0])} data files")
+    print(f"[ok] Collected jaraco.text: {len(jaraco_text_ret[0])} data files")
 except Exception as e:
-    print(f"⚠️  Warning: Could not collect jaraco packages: {e}")
+    print(f"[!]  Warning: Could not collect jaraco packages: {e}")
 
 # ANTsPyx - can be large, collect selectively
 try:
@@ -170,14 +168,14 @@ try:
         if os.path.exists(src) and os.path.getsize(src) < 50 * 1024 * 1024
     ]
     datas += ants_data_filtered
-    print(f"✓ Collected ANTsPyx: {len(ants_data_filtered)} data files (filtered)")
+    print(f"[ok] Collected ANTsPyx: {len(ants_data_filtered)} data files (filtered)")
 
     # Collect ANTsPyx binaries
     tmp_ret = collect_all('antspyx')
     binaries += tmp_ret[1]
     hiddenimports += tmp_ret[2]
 except Exception as e:
-    print(f"⚠ Warning: Could not collect antspyx: {e}")
+    print(f"[!] Warning: Could not collect antspyx: {e}")
 
 # ============================================================================
 # EXCLUDES - Remove unnecessary modules

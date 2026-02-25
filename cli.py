@@ -1,13 +1,13 @@
+from backend.step1WarpSubjectToAgeMatchedTemplate import warpSubjectToAgeMatchedTemplate
+from backend.step2ApplySubjectLesionToControlImageWarp import (
+    applySubjectLesionToControlImageWarp,
+)
+from backend.step3GenerateVisitationMap import generateVisitationMap
+from backend.step4WarpVisitationMapTo40wTemplate import warpVisitationMap
+from backend.step5MakeDisconnectomeMap import generateDisconnectome
 import click
 import re
 
-from step1WarpSubjectToAgeMatchedTemplate import warpSubjectToAgeMatchedTemplate
-from step2ApplySubjectLesionToControlImageWarp import (
-    applySubjectLesionToControlImageWarp,
-)
-from step3GenerateVisitationMap import generateVisitationMap
-from step4WarpVisitationMapTo40wTemplate import warpVisitationMap
-from step5MakeDisconnectomeMap import generateDisconnectome
 
 from lib.utils import (
     createControlSpaceDirectory,
