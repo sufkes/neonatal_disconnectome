@@ -105,59 +105,7 @@ sudo dnf install ImageMagick
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    subgraph UI["🖥️  UI Layer"]
-        APP["app.py<br/>DisconnectomeApp"]
-        subgraph SCREENS["Screens"]
-            S1["StartRunForm"]
-            S2A["WarpForm"]
-            S2B["WarpedLesionForm"]
-            S3["DisconnectomeForm"]
-            S4["FinalResult"]
-        end
-        S1 --> S2A & S2B
-        S2A --> S3 --> S4
-        S2B --> S4
-    end
-
-    subgraph SVC["⚙️  Services"]
-        SM["StateManager<br/>AppConfig · ProcessingState"]
-        TM["TaskManager<br/>BackgroundTask · GUIThreadExecutor"]
-        THM["ThemeManager"]
-        DD["DataDownloader"]
-        LOG["Logging<br/>Queue → file + widget"]
-    end
-
-    subgraph PROC["🔬  Processing Pipeline"]
-        LG["logic.py<br/>(orchestrator)"]
-        P1["Step 1<br/>ants.registration SyN<br/>⏱ heartbeat"]
-        P2["Step 2<br/>ants.apply_transforms<br/>per control"]
-        P3["Step 3<br/>dipy tractography<br/>per control"]
-        P4["Step 4<br/>ants.apply_transforms<br/>warp to 40w"]
-        P5["Step 5<br/>numpy average<br/>⏱ heartbeat"]
-        LG --> P1 --> P2 --> P3 --> P4 --> P5
-    end
-
-    subgraph DATA["💾  Filesystem"]
-        DS["user_settings.json"]
-        DC["Controls<br/>xfm-ants · trk · scan_age"]
-        DT["Templates<br/>week28-44 NIfTI"]
-        DO["Run Output<br/>template_space · disconnectome<br/>control_space · thumbnails"]
-        DL["disconnectome.log"]
-    end
-
-    APP --> SM & TM & THM & DD & LOG
-    SCREENS --> SM
-    SCREENS --> TM
-    TM --> LG
-    SM --> DS
-    DD --> DC & DT
-    LOG --> DL
-    P2 & P3 & P4 --> DC
-    P1 & P2 & P4 --> DT
-    P1 & P2 & P3 & P4 & P5 --> DO
-```
+![Architecture](architecture.png)
 
 ## Quick Start
 
