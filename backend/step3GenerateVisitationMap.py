@@ -32,18 +32,21 @@ def generateVisitationMap(
         runs_path = os.path.join(runs_dir, subject)
         runs_control_space_path = os.path.join(runs_path, CONTROL_SPACE)
 
-        dir_list = [f.name for f in os.scandir(runs_control_space_path) if f.is_dir()]
+        dir_list = [f.name for f in os.scandir(CONTROLS_DIR) if f.is_dir()]
         total = len(dir_list)
 
         for i, d in enumerate(dir_list):
+            sub_dir_list = [
+                f.name for f in os.scandir(os.path.join(CONTROLS_DIR, d)) if f.is_dir()
+            ]
+            sub_name = d + "_" + sub_dir_list[0]
+
             update_progress(i / total, f"Generating visitation map {i + 1}/{total}")
-            sub_name = d
+
             path = os.path.join(runs_control_space_path, sub_name)
             lesion_path = os.path.join(path, "lesion.nii.gz")
-            sub_name_split = sub_name.split("_")
-            trk_dir = os.path.join(
-                CONTROLS_DIR, sub_name_split[0], sub_name_split[1], "trk"
-            )
+
+            trk_dir = os.path.join(CONTROLS_DIR, d, sub_dir_list[0], "trk")
             tract_path = os.path.join(trk_dir, sub_name + "_hardi.trk")
 
             # Load tractogram
