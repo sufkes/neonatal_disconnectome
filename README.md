@@ -108,7 +108,7 @@ sudo dnf install ImageMagick
 ```mermaid
 flowchart TB
     subgraph UI["🖥️  UI Layer"]
-        APP["app.py\nDisconnectomeApp"]
+        APP["app.py<br/>DisconnectomeApp"]
         subgraph SCREENS["Screens"]
             S1["StartRunForm"]
             S2A["WarpForm"]
@@ -122,28 +122,28 @@ flowchart TB
     end
 
     subgraph SVC["⚙️  Services"]
-        SM["StateManager\nAppConfig · ProcessingState"]
-        TM["TaskManager\nBackgroundTask · GUIThreadExecutor"]
+        SM["StateManager<br/>AppConfig · ProcessingState"]
+        TM["TaskManager<br/>BackgroundTask · GUIThreadExecutor"]
         THM["ThemeManager"]
         DD["DataDownloader"]
-        LOG["Logging\nQueue → file + widget"]
+        LOG["Logging<br/>Queue → file + widget"]
     end
 
     subgraph PROC["🔬  Processing Pipeline"]
-        LG["logic.py\n(orchestrator)"]
-        P1["Step 1\nants.registration SyN\n⏱ heartbeat"]
-        P2["Step 2\nants.apply_transforms\nper control"]
-        P3["Step 3\ndipy tractography\nper control"]
-        P4["Step 4\nants.apply_transforms\nwarp to 40w"]
-        P5["Step 5\nnumpy average\n⏱ heartbeat"]
+        LG["logic.py<br/>(orchestrator)"]
+        P1["Step 1<br/>ants.registration SyN<br/>⏱ heartbeat"]
+        P2["Step 2<br/>ants.apply_transforms<br/>per control"]
+        P3["Step 3<br/>dipy tractography<br/>per control"]
+        P4["Step 4<br/>ants.apply_transforms<br/>warp to 40w"]
+        P5["Step 5<br/>numpy average<br/>⏱ heartbeat"]
         LG --> P1 --> P2 --> P3 --> P4 --> P5
     end
 
     subgraph DATA["💾  Filesystem"]
         DS["user_settings.json"]
-        DC["Controls\nxfm-ants · trk · scan_age"]
-        DT["Templates\nweek28-44 NIfTI"]
-        DO["Run Output\ntemplate_space · disconnectome\ncontrol_space · thumbnails"]
+        DC["Controls<br/>xfm-ants · trk · scan_age"]
+        DT["Templates<br/>week28-44 NIfTI"]
+        DO["Run Output<br/>template_space · disconnectome<br/>control_space · thumbnails"]
         DL["disconnectome.log"]
     end
 
