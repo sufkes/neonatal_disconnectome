@@ -578,13 +578,17 @@ disconnectome/
 │   └── step5*.py               # Generate disconnectome
 ├── lib/
 │   ├── constants.py            # Application constants and paths
-│   ├── state_management.py    # State management system
+│   ├── state_management.py     # State management system
 │   ├── theme_manager.py        # Theme management
 │   ├── data_downloader.py      # Data download system
+│   ├── logging_handler.py      # Logging system
+│   ├── threading_utils.py      # Thread-safe utilities for GUI updates and background processing
 │   ├── gui_utils.py            # GUI utility functions
 │   ├── makeThumbnails.py       # Thumbnail generation
 │   └── utils.py                # General utilities
 ├── screens/
+│   ├── ctk_hyperlink_manager.py # Manage clickable links
+│   ├── data_download_dialog.py # Dialog window for downloading data
 │   ├── start_screen.py         # Initial workflow selection
 │   ├── warp_form.py            # Brain image + lesion mask input
 │   ├── warped_lesion_form.py   # Pre-warped lesion input
