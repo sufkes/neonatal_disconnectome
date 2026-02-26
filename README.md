@@ -858,10 +858,10 @@ This project is licensed under the GNU GENERAL PUBLIC LICENSE - see the [LICENSE
 If you use this software in your research, please cite:
 
 ```bibtex
-@software{disconnectome2024,
+@software{disconnectome2026,
   author = {Your Name},
   title = {Disconnectome: Brain Disconnectome Analysis Tool},
-  year = {2024},
+  year = {2026},
   url = {https://github.com/sufkes/neonatal_disconnectome}
 }
 ```
