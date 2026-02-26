@@ -10,6 +10,7 @@ A desktop application for analyzing brain disconnectivity patterns in neonatal b
 
 - [Overview](#overview)
 - [Prerequisites](#prerequisites)
+- [Architecture](#architecture)
 - [Quick Start](#quick-start)
 - [Detailed Build Instructions](#detailed-build-instructions)
   - [macOS](#building-for-macos)
@@ -101,6 +102,62 @@ sudo dnf install ImageMagick
 ```
 
 ---
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph UI["🖥️  UI Layer"]
+        APP["app.py\nDisconnectomeApp"]
+        subgraph SCREENS["Screens"]
+            S1["StartRunForm"]
+            S2A["WarpForm"]
+            S2B["WarpedLesionForm"]
+            S3["DisconnectomeForm"]
+            S4["FinalResult"]
+        end
+        S1 --> S2A & S2B
+        S2A --> S3 --> S4
+        S2B --> S4
+    end
+
+    subgraph SVC["⚙️  Services"]
+        SM["StateManager\nAppConfig · ProcessingState"]
+        TM["TaskManager\nBackgroundTask · GUIThreadExecutor"]
+        THM["ThemeManager"]
+        DD["DataDownloader"]
+        LOG["Logging\nQueue → file + widget"]
+    end
+
+    subgraph PROC["🔬  Processing Pipeline"]
+        LG["logic.py\n(orchestrator)"]
+        P1["Step 1\nants.registration SyN\n⏱ heartbeat"]
+        P2["Step 2\nants.apply_transforms\nper control"]
+        P3["Step 3\ndipy tractography\nper control"]
+        P4["Step 4\nants.apply_transforms\nwarp to 40w"]
+        P5["Step 5\nnumpy average\n⏱ heartbeat"]
+        LG --> P1 --> P2 --> P3 --> P4 --> P5
+    end
+
+    subgraph DATA["💾  Filesystem"]
+        DS["user_settings.json"]
+        DC["Controls\nxfm-ants · trk · scan_age"]
+        DT["Templates\nweek28-44 NIfTI"]
+        DO["Run Output\ntemplate_space · disconnectome\ncontrol_space · thumbnails"]
+        DL["disconnectome.log"]
+    end
+
+    APP --> SM & TM & THM & DD & LOG
+    SCREENS --> SM
+    SCREENS --> TM
+    TM --> LG
+    SM --> DS
+    DD --> DC & DT
+    LOG --> DL
+    P2 & P3 & P4 --> DC
+    P1 & P2 & P4 --> DT
+    P1 & P2 & P3 & P4 & P5 --> DO
+```
 
 ## Quick Start
 
