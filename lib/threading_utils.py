@@ -11,9 +11,11 @@ This module provides a robust framework for:
 import threading
 import queue
 import logging
+import time
 from typing import Callable, Optional, Any, Dict
 from dataclasses import dataclass
 from enum import Enum
+from contextlib import contextmanager
 
 logger = logging.getLogger("disconnectome")
 
@@ -38,6 +40,37 @@ class TaskResult:
     error_message: str = ""
 
 
+@contextmanager
+def progress_heartbeat(
+    update_fn,
+    start: float,
+    end: float,
+    duration_estimate: float,
+    message: str,
+    interval: float = 1.0,
+):
+    """Context manager that ticks progress asymptotically from start→end while a blocking call runs."""
+    import time
+
+    _stop = threading.Event()
+
+    def _tick():
+        t0 = time.monotonic()
+        while not _stop.is_set():
+            elapsed = time.monotonic() - t0
+            p = start + (end - start) * (1 - 1 / (1 + elapsed / duration_estimate))
+            update_fn(p, message)
+            time.sleep(interval)
+
+    t = threading.Thread(target=_tick, daemon=True)
+    t.start()
+    try:
+        yield
+    finally:
+        _stop.set()
+        t.join(timeout=interval + 0.1)
+
+
 class GUIThreadExecutor:
     """
     Thread-safe executor for running callbacks on the GUI thread.
@@ -59,27 +92,26 @@ class GUIThreadExecutor:
         """Start the consumer that processes GUI callbacks"""
 
         def consume():
+            if not self._running:
+                return
             """Consumer loop running on GUI thread"""
-            while self._running:
+            try:
+                callback, args, kwargs = self._callback_queue.get_nowait()
                 try:
-                    # Process all pending callbacks
-                    while True:
-                        callback, args, kwargs = self._callback_queue.get_nowait()
-                        try:
-                            callback(*args, **kwargs)
-                        except Exception as e:
-                            logger.error(f"Error in GUI callback: {e}", exc_info=True)
-                        finally:
-                            self._callback_queue.task_done()
-                except queue.Empty:
-                    break
+                    callback(*args, **kwargs)
+                except Exception as e:
+                    logger.error(f"Error in GUI callback: {e}", exc_info=True)
+                finally:
+                    self._callback_queue.task_done()
+            except queue.Empty:
+                pass
 
             # Schedule next check
             if self._running and self.root.winfo_exists():
-                self.root.after(50, consume)
+                self.root.after(16, consume)
 
         # Start consumer on GUI thread
-        self.root.after(50, consume)
+        self.root.after(16, consume)
 
     def submit(self, callback: Callable, *args, **kwargs):
         """
@@ -145,6 +177,7 @@ class BackgroundTask:
         self._progress = 0.0
         self._progress_message = ""
         self._lock = threading.Lock()
+        self._last_progress_update = 0.0
 
     def start(self):
         """Start the background task"""
@@ -199,6 +232,11 @@ class BackgroundTask:
         with self._lock:
             self._progress = progress
             self._progress_message = message
+            now = time.monotonic()
+            # ✅ Only push GUI update at most every 100ms
+            if now - self._last_progress_update < 0.1:
+                return
+            self._last_progress_update = now
 
         # ✅ FIX: Always use gui_executor - no direct callbacks
         if self.on_progress:

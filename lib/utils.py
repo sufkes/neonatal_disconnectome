@@ -18,6 +18,8 @@ import json
 import platform
 import subprocess
 import numpy as np
+import sys
+from pathlib import Path
 
 from lib.constants import (
     CONTROL_SPACE,
@@ -30,7 +32,20 @@ from lib.constants import (
 logger = logging.getLogger("disconnectome")
 
 
-SETTINGS_FILE = "user_settings.json"
+def _get_settings_path() -> str:
+    if getattr(sys, "frozen", False):  # Running as bundled .app
+        if sys.platform == "darwin":
+            base = Path.home() / "Library" / "Application Support" / "Disconnectome"
+        elif sys.platform == "win32":
+            base = Path(os.environ.get("APPDATA", "~")) / "Disconnectome"
+        else:
+            base = Path.home() / ".config" / "Disconnectome"
+        base.mkdir(parents=True, exist_ok=True)
+        return str(base / "user_settings.json")
+    return "user_settings.json"  # Dev: keep relative path
+
+
+SETTINGS_FILE = _get_settings_path()
 
 
 def update_settings(**kwargs):

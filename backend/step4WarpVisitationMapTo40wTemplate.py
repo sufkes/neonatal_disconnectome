@@ -36,7 +36,9 @@ def warpVisitationMap(
         # looping through every subject sub folder in the controls folder
         # file uploaded is what will be used
         dir_list = [f.name for f in os.scandir(CONTROLS_DIR) if f.is_dir()]
-        for d in dir_list:
+        total = len(dir_list)
+        for i, d in enumerate(dir_list):
+            update_progress(i / total, f"Warping visitation map {i + 1}/{total}")
             sub_dir_list = [
                 f.name for f in os.scandir(os.path.join(CONTROLS_DIR, d)) if f.is_dir()
             ]

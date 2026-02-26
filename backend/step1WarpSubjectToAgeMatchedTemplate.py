@@ -1,6 +1,7 @@
 import logging
 import os
 import threading
+import time
 from typing import Callable, Optional
 import ants
 
@@ -12,6 +13,7 @@ from lib.constants import (
     THUMBNAILS,
 )
 from lib.makeThumbnails import plotAlignedImagePair, plotLabelClustersOnBackground
+from lib.threading_utils import progress_heartbeat
 from lib.utils import createTemplateSpaceDirectory
 
 # Get the same logger used by the app's GUI logging setup
@@ -82,14 +84,17 @@ def warpSubjectToAgeMatchedTemplate(
             0.1, "Calculating registration transform (this is the slowest step)"
         )
 
-        ## 5. Calculate the moving -> fixed transform.
-        registration = ants.registration(
-            fixed=fixed_ants_img,
-            moving=moving_ants_img,
-            type_of_transform="SyN",
-            outprefix=out_prefix,
-            verbose=False,
-        )
+        with progress_heartbeat(
+            update_progress, 0.1, 0.65, 300.0, "Calculating registration transform..."
+        ):
+            ## 5. Calculate the moving -> fixed transform.
+            registration = ants.registration(
+                fixed=fixed_ants_img,
+                moving=moving_ants_img,
+                type_of_transform="SyN",
+                outprefix=out_prefix,
+                verbose=False,
+            )
 
         """
           This will create the following files:

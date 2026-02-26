@@ -44,13 +44,15 @@ def applySubjectLesionToControlImageWarp(
         out_prefix = "brain_img" + "_" + age + "-week-template-space-"
 
         dir_list = [f.name for f in os.scandir(CONTROLS_DIR) if f.is_dir()]
+        total = len(dir_list)
 
         if check_cancelled():
             logger.info("Warp cancelled during setup")
             return False
 
         # looping through every subject sub folder in the controls folder
-        for d in dir_list:
+        for i, d in enumerate(dir_list):
+            update_progress(i / total, f"Warping lesion to control {i + 1}/{total}")
             sub_dir_list = [
                 f.name for f in os.scandir(os.path.join(CONTROLS_DIR, d)) if f.is_dir()
             ]

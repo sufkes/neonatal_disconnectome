@@ -56,7 +56,7 @@ def step1_from_state(
         if progress_callback:
             progress_callback(progress, message)
 
-        if state_manager:
+        if state_manager and progress in (0.0, 0.5, 1.0):
             state_manager.update_processing(
                 current_step="step1_running",
                 step1_progress=progress,
@@ -187,7 +187,7 @@ def step2_from_state(
         if progress_callback:
             progress_callback(progress, message)
 
-        if state_manager:
+        if state_manager and progress in (0.0, 0.5, 1.0):
             state_manager.update_processing(
                 current_step="step2_running",
                 step1_progress=progress,
@@ -339,7 +339,7 @@ def process_warped_lesion_from_state(
         if progress_callback:
             progress_callback(progress, message)
 
-        if state_manager:
+        if state_manager and progress in (0.0, 0.5, 1.0):
             state_manager.update_processing(
                 current_step="step2_running",
                 step1_progress=progress,

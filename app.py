@@ -32,9 +32,6 @@ from lib.theme_manager import ThemeManager
 from lib.data_downloader import DataDownloader
 from screens.data_download_dialog import DataDownloadDialog
 
-# Initialize state manager globally
-state_manager = StateManager()
-
 
 class TkinterTextHandler(logging.Handler):
     """Logging handler that directs logs into a Tkinter Textbox (truly thread-safe)."""
@@ -193,10 +190,11 @@ class DisconnectomeApp(ctk.CTk):
         self.app_data = {}
 
         self.logger.info("DisconnectomeApp started")
-        self.show_start_form()
+        self.after(100, self._startup)
 
-        # Check data installation after UI is ready
-        self.after(500, self.check_data_installation)
+    def _startup(self):
+        self.show_start_form()
+        self.after(400, self.check_data_installation)
 
     def on_theme_changed_global(self, theme_name: str):
         """Called when theme changes globally"""
@@ -862,6 +860,11 @@ class DisconnectomeApp(ctk.CTk):
         Check if required data files are installed.
         If not, prompt user to download them.
         """
+        import threading
+
+        threading.Thread(target=self._check_data_worker, daemon=True).start()
+
+    def _check_data_worker(self):
         # In dev mode, check if local data exists first
         if not getattr(sys, "frozen", False):
             from pathlib import Path
@@ -878,16 +881,18 @@ class DisconnectomeApp(ctk.CTk):
                 and any(local_controls.iterdir())
             ):
                 self.logger.info(f"Using local data directory: {local_data}")
-                self.on_data_ready()
+                self.after(0, self.on_data_ready)
                 return
 
         # Check downloaded/system data
         if self.data_downloader.is_fully_installed():
-            self.logger.info("All required data files are installed")
+            self.after(
+                0, lambda: self.logger.info("All required data files are installed")
+            )
             return
 
-        self.logger.warning("Required data files are missing")
-        self._show_data_warning_banner()
+        self.after(0, lambda: self.logger.warning("Required data files are missing"))
+        self.after(0, self._show_data_warning_banner)
 
     def show_data_download_dialog(self):
         """Show the data download dialog"""

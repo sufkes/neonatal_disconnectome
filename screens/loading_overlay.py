@@ -140,7 +140,6 @@ class LoadingOverlay(ctk.CTkFrame):
         self.lift()  # Bring to front
         self.place(relx=0, rely=0, relwidth=1, relheight=1)
         self.progressbar.start()
-        self.update_idletasks()  # Force UI update
 
     def update_status(self, status=None, detail=None, progress=None):
         """Update overlay status without hiding/showing"""
@@ -151,7 +150,6 @@ class LoadingOverlay(ctk.CTkFrame):
         if progress is not None:
             percentage = int(progress * 100)
             self.progress_label.configure(text=f"{percentage}%")
-        self.update_idletasks()  # Force UI update
 
     def update_theme(self):
         """Update overlay theme colors"""
@@ -161,4 +159,3 @@ class LoadingOverlay(ctk.CTkFrame):
         """Hide overlay"""
         self.progressbar.stop()
         self.place_forget()
-        self.update_idletasks()  # Force UI update

@@ -320,12 +320,26 @@ class ProcessingState:
         return cls(**data)
 
 
+def _get_default_config_path() -> str:
+    """Return a writable path for config, even when running from a read-only DMG."""
+    if getattr(sys, "frozen", False):
+        if sys.platform == "darwin":
+            base = Path.home() / "Library" / "Application Support" / "Disconnectome"
+        elif sys.platform == "win32":
+            base = Path(os.environ.get("APPDATA", "~")) / "Disconnectome"
+        else:
+            base = Path.home() / ".config" / "Disconnectome"
+        base.mkdir(parents=True, exist_ok=True)
+        return str(base / "user_settings.json")
+    return "user_settings.json"
+
+
 class StateManager:
     """
     Central state manager for the application - Thread-Safe Version
     """
 
-    def __init__(self, config_path: str = "user_settings.json", gui_executor=None):
+    def __init__(self, config_path: str = None, gui_executor=None):
         """
         Initialize state manager.
 
@@ -333,6 +347,8 @@ class StateManager:
             config_path: Path to configuration file
             gui_executor: GUIThreadExecutor for thread-safe observer notifications
         """
+        if config_path is None:
+            config_path = _get_default_config_path()
         self.config_path = config_path
         self.config = AppConfig.load(config_path)
         self.processing = ProcessingState()

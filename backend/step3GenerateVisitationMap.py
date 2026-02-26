@@ -33,8 +33,10 @@ def generateVisitationMap(
         runs_control_space_path = os.path.join(runs_path, CONTROL_SPACE)
 
         dir_list = [f.name for f in os.scandir(runs_control_space_path) if f.is_dir()]
+        total = len(dir_list)
 
-        for d in dir_list:
+        for i, d in enumerate(dir_list):
+            update_progress(i / total, f"Generating visitation map {i + 1}/{total}")
             sub_name = d
             path = os.path.join(runs_control_space_path, sub_name)
             lesion_path = os.path.join(path, "lesion.nii.gz")
