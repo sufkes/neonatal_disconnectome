@@ -147,7 +147,8 @@ def data_options(f):
 
 @cli.command()
 @click.option(
-    "-r--runsfolder",
+    "-r",
+    "--runsfolder",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     required=True,
     help="Path to the runs folder.",
