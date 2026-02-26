@@ -874,7 +874,7 @@ For questions, issues, or feature requests:
 
 - **Documentation:** [https://github.com/sufkes/neonatal_disconnectome](https://github.com/sufkes/neonatal_disconnectome)
 - **Issues:** [GitHub Issues](https://github.com/sufkes/neonatal_disconnectome/issues)
-- **Email:** support@yourlab.edu
+- **Email:** steven.ufkes@cw.bc.ca
 
 ---
 
