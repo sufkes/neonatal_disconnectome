@@ -1,23 +1,34 @@
-# Disconnectome - Build Instructions
+# Disconnectome
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/your-org/disconnectome)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/sufkes/neonatal_disconnectome)
 
 A desktop application for analyzing brain disconnectivity patterns in neonatal brain imaging data.
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Processing Pipeline](#processing-pipeline)
 - [Prerequisites](#prerequisites)
-- [Architecture](#architecture)
 - [Quick Start](#quick-start)
 - [Detailed Build Instructions](#detailed-build-instructions)
   - [macOS](#building-for-macos)
   - [Windows](#building-for-windows)
   - [Linux](#building-for-linux)
+- [Command-Line Interface](#command-line-interface)
+  - [Interactive Mode](#interactive-mode)
+  - [Scripted / Batch Mode](#scripted--batch-mode)
+  - [Flag Reference](#flag-reference)
+- [Running with Docker](#running-with-docker)
+  - [Quick Start](#docker-quick-start)
+  - [Providing Data](#providing-data)
+  - [Environment Variables](#environment-variables)
+  - [Example Compose File](#example-compose-file)
 - [Data Package Setup](#data-package-setup)
 - [Development](#development)
+- [Versioning](#versioning)
+- [Changelog](#changelog)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
@@ -32,7 +43,20 @@ Disconnectome is a Python-based desktop application built with CustomTkinter tha
 - Lesion mask warping to age-matched templates
 - Disconnectome map generation
 - Pre-warped lesion workflow
-- Cross-platform deployment (macOS, Windows, Linux)
+- Headless / batch processing via a full-featured CLI
+- Cross-platform deployment (macOS, Windows, Linux, Docker)
+
+## Processing Pipeline
+
+The application runs a five-step pipeline to produce a disconnectome map from a neonatal brain image and lesion mask.
+
+![Architecture](architecture.png)
+
+The **pre-warped** path skips Step 1 entirely — use `--warped` / `-w` on the CLI or select the pre-warped option in the GUI when the lesion mask has already been registered to a dHCP template externally.
+
+---
+
+---
 
 ## Prerequisites
 
@@ -40,106 +64,60 @@ Disconnectome is a Python-based desktop application built with CustomTkinter tha
 
 - **Python 3.11 or higher** ([Download](https://www.python.org/downloads/))
 - **Git** ([Download](https://git-scm.com/downloads))
-- **8GB RAM minimum** (16GB recommended)
-- **10GB free disk space** (for build process and data)
+- **8 GB RAM minimum** (16 GB recommended)
+- **10 GB free disk space** (for build process and data)
 
 ### Platform-Specific Tools
 
 #### macOS
 
 ```bash
-# Xcode Command Line Tools (required)
 xcode-select --install
-
-# Homebrew (recommended)
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Optional: ImageMagick for icon conversion
-brew install imagemagick
+brew install imagemagick   # optional, for icon conversion
 ```
 
 #### Windows
 
 - **Visual C++ Redistributable** ([Download](https://aka.ms/vs/17/release/vc_redist.x64.exe))
-- **Optional:** ImageMagick for icon conversion ([Download](https://imagemagick.org/script/download.php))
-- **Optional:** Inno Setup for creating installers ([Download](https://jrsoftware.org/isinfo.php))
+- **Inno Setup** — optional, for creating installers ([Download](https://jrsoftware.org/isinfo.php))
 
 #### Linux (Ubuntu/Debian)
 
 ```bash
-# Essential build tools
 sudo apt-get update
-sudo apt-get install -y \
-    python3.11 \
-    python3.11-venv \
-    python3-pip \
-    python3-tk \
-    gcc \
-    build-essential \
-    pkg-config \
-    libhdf5-dev \
-    cmake
-
-# Optional: ImageMagick for icon conversion
-sudo apt-get install imagemagick
+sudo apt-get install -y python3.11 python3.11-venv python3-pip \
+    python3-tk gcc build-essential pkg-config libhdf5-dev cmake
 ```
 
 #### Linux (Fedora/RHEL)
 
 ```bash
-# Essential build tools
-sudo dnf install -y \
-    python3.11 \
-    python3-tkinter \
-    gcc \
-    gcc-c++ \
-    make \
-    hdf5-devel \
-    cmake
-
-# Optional: ImageMagick for icon conversion
-sudo dnf install ImageMagick
+sudo dnf install -y python3.11 python3-tkinter gcc gcc-c++ make hdf5-devel cmake
 ```
 
 ---
-
-## Architecture
-
-![Architecture](architecture.png)
 
 ## Quick Start
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/disconnectome.git
-cd disconnectome
+git clone https://github.com/sufkes/neonatal_disconnectome.git
+cd neonatal_disconnectome
 
-# 2. Create and activate virtual environment
-python3.11 -m venv venv
-
-# On macOS/Linux:
-source venv/bin/activate
-
-# On Windows:
-venv\Scripts\activate
+# 2. Create a virtual environment
+python3 -m venv venv
+source venv/bin/activate   # Windows: venv\Scripts\activate
 
 # 3. Install dependencies
 pip install --upgrade pip
 pip install -r requirements.txt
-pip install pyinstaller
 
-# 4. Run in development mode
+# 4. Run the GUI
 python app.py
 
-# 5. Build for your platform
-# macOS:
-./build_macos.sh build
-
-# Windows:
-.\build_windows.bat build
-
-# Linux:
-./build_linux.sh build
+# 5. Or run the CLI
+python cli.py --help
 ```
 
 ---
@@ -148,404 +126,255 @@ python app.py
 
 ### Building for macOS
 
-#### Step 1: Setup Environment
-
 ```bash
-# Clone repository
-git clone https://github.com/your-org/disconnectome.git
-cd disconnectome
-
-# Create virtual environment
-python3.11 -m venv venv
 source venv/bin/activate
-
-# Install dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
 pip install pyinstaller
-```
-
-#### Step 2: Create Application Icon
-
-```bash
-# Option 1: Use the automated script
-python convert_icon.py
-
-# Option 2: Manual creation with sips (macOS native)
-mkdir icon.iconset
-sips -z 16 16     app_icon.png --out icon.iconset/icon_16x16.png
-sips -z 32 32     app_icon.png --out icon.iconset/icon_16x16@2x.png
-sips -z 32 32     app_icon.png --out icon.iconset/icon_32x32.png
-sips -z 64 64     app_icon.png --out icon.iconset/icon_32x32@2x.png
-sips -z 128 128   app_icon.png --out icon.iconset/icon_128x128.png
-sips -z 256 256   app_icon.png --out icon.iconset/icon_128x128@2x.png
-sips -z 256 256   app_icon.png --out icon.iconset/icon_256x256.png
-sips -z 512 512   app_icon.png --out icon.iconset/icon_256x256@2x.png
-sips -z 512 512   app_icon.png --out icon.iconset/icon_512x512.png
-sips -z 1024 1024 app_icon.png --out icon.iconset/icon_512x512@2x.png
-iconutil -c icns icon.iconset
-rm -rf icon.iconset
-```
-
-#### Step 3: Build Application
-
-```bash
-# Make build script executable
 chmod +x build_macos.sh
-
-# Clean previous builds (optional)
-./build_macos.sh clean
-
-# Build the application
-./build_macos.sh build
+./build_macos.sh both      # clean + build
+./build_macos.sh dmg       # create distributable DMG
 ```
 
-**Output:** `dist/Disconnectome.app`
-
-#### Step 4: Create DMG Installer (Optional)
-
-```bash
-./build_macos.sh dmg
-```
-
-**Output:** `Disconnectome-macOS.dmg`
-
-#### Step 5: Code Signing (Optional but Recommended)
-
-```bash
-# List available signing identities
-security find-identity -v -p codesigning
-
-# Sign the application
-codesign --deep --force --verify --verbose \
-  --sign "Developer ID Application: Your Name (TEAM_ID)" \
-  --options runtime \
-  dist/Disconnectome.app
-
-# Verify the signature
-codesign --verify --verbose dist/Disconnectome.app
-spctl --assess --verbose dist/Disconnectome.app
-```
-
-#### Step 6: Notarization (For Public Distribution)
-
-```bash
-# Store credentials (one-time setup)
-xcrun notarytool store-credentials "notarytool-profile" \
-  --apple-id "your-email@example.com" \
-  --team-id "TEAM_ID" \
-  --password "app-specific-password"
-
-# Notarize the DMG
-xcrun notarytool submit Disconnectome-macOS.dmg \
-  --keychain-profile "notarytool-profile" \
-  --wait
-
-# Staple the notarization ticket
-xcrun stapler staple Disconnectome-macOS.dmg
-```
-
-#### Testing
-
-```bash
-# Test the built application
-./build_macos.sh test
-
-# Or manually
-open dist/Disconnectome.app
-```
-
----
+Output: `Disconnectome-macOS.dmg`
 
 ### Building for Windows
 
-#### Step 1: Setup Environment
-
-```powershell
-# Clone repository
-git clone https://github.com/sufkes/neonatal_disconnectome.git
-cd disconnectome
-
-# Create virtual environment
-python -m venv venv
+```bat
 venv\Scripts\activate
-
-# Install dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
 pip install pyinstaller
+build_windows.bat both
+build_windows.bat installer   # optional: create Inno Setup installer
 ```
 
-#### Step 2: Create Application Icon
-
-```powershell
-# Option 1: Use the automated script
-python convert_icon.py
-
-# Option 2: Manual creation with ImageMagick (if installed)
-magick convert app_icon.png -define icon:auto-resize=256,128,64,48,32,16 icon.ico
-```
-
-#### Step 3: Build Application
-
-```powershell
-# Clean previous builds (optional)
-.\build_windows.bat clean
-
-# Build the application
-.\build_windows.bat build
-```
-
-**Output:** `dist\Disconnectome\` (folder with all required files)
-
-#### Step 4: Create Installer (Recommended)
-
-**Prerequisites:** Install [Inno Setup](https://jrsoftware.org/isinfo.php)
-
-```powershell
-# The build script will create installer.iss if it doesn't exist
-.\build_windows.bat installer
-```
-
-**Output:** `DisconnectomeSetup-1.0.0.exe`
-
-#### Step 5: Code Signing (Optional but Recommended)
-
-```powershell
-# Sign the executable
-signtool sign /f "path\to\certificate.pfx" /p "password" `
-  /tr "http://timestamp.digicert.com" /td SHA256 /fd SHA256 `
-  "dist\Disconnectome\Disconnectome.exe"
-
-# Sign the installer
-signtool sign /f "path\to\certificate.pfx" /p "password" `
-  /tr "http://timestamp.digicert.com" /td SHA256 /fd SHA256 `
-  "DisconnectomeSetup-1.0.0.exe"
-
-# Verify signature
-signtool verify /pa "DisconnectomeSetup-1.0.0.exe"
-```
-
-#### Testing
-
-```powershell
-# Test the built application
-.\build_windows.bat test
-
-# Or manually
-.\dist\Disconnectome\Disconnectome.exe
-```
-
----
+Output: `dist\Disconnectome\Disconnectome.exe`
 
 ### Building for Linux
 
-#### Step 1: Setup Environment
-
 ```bash
-# Clone repository
-git clone https://github.com/your-org/disconnectome.git
-cd disconnectome
-
-# Create virtual environment
-python3.11 -m venv venv
 source venv/bin/activate
-
-# Install dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
 pip install pyinstaller
-```
-
-#### Step 2: Build Application
-
-```bash
-# Make build script executable
 chmod +x build_linux.sh
-
-# Clean previous builds (optional)
-./build_linux.sh clean
-
-# Build the application
-./build_linux.sh build
+./build_linux.sh both        # clean + build
+./build_linux.sh appimage    # create AppImage
+./build_linux.sh deb         # create .deb package
 ```
 
-**Output:** `dist/Disconnectome/` (folder with all required files)
+Output: `Disconnectome-x86_64.AppImage` and/or `disconnectome_1.0.0_amd64.deb`
 
-#### Step 3: Create Distribution Packages
+---
 
-##### Option A: AppImage (Universal, Recommended)
+## Command-Line Interface
+
+The CLI (`cli.py` / `disconnectome-cli`) allows fully headless processing — useful for batch jobs, HPC clusters, and Docker-based workflows.
+
+### Interactive Mode
+
+Add `-i` / `--interactive` to any command to be prompted for any inputs you haven't supplied as flags. Flags always take precedence; only missing values are prompted. Path prompts support **Tab autocomplete** on macOS and Linux (requires `pyreadline3` on Windows).
 
 ```bash
-./build_linux.sh appimage
+# Fully interactive — prompts for everything
+python cli.py start -i
+
+# Partially pre-filled — only prompts for what's missing
+python cli.py start -i -s sub01 -g 36
+
+# Interactive disconnectome generation
+python cli.py generate_disconnectome -i
 ```
 
-**Output:** `Disconnectome-x86_64.AppImage`
+### Scripted / Batch Mode
 
-**Usage:**
+Omit `-i` and supply all flags explicitly. Missing required flags produce a single clear error listing everything that's absent.
 
 ```bash
-chmod +x Disconnectome-x86_64.AppImage
-./Disconnectome-x86_64.AppImage
+# Full pipeline (raw brain image → disconnectome)
+python cli.py start \
+  -r /data/runs \
+  -s sub01 \
+  -g 36 \
+  -t T2w \
+  -b /data/sub01_brain.nii.gz \
+  -l /data/sub01_lesion.nii.gz
+
+# Warped-lesion pipeline (skip registration, lesion already in template space)
+python cli.py start \
+  -r /data/runs \
+  -s sub01 \
+  -g 36 \
+  -t T2w \
+  -w \
+  -l /data/sub01_lesion_warped.nii.gz
+
+# Generate disconnectome only (step 1 already completed)
+python cli.py generate_disconnectome \
+  -r /data/runs \
+  -s sub01 \
+  -g 36 \
+  -t T2w \
+  -l /data/sub01_lesion.nii.gz
+
+# Check / download data files
+python cli.py check_data
+python cli.py check_data -a          # auto-download without prompting
+python cli.py check_data -d /mnt/data  # use a custom data directory
 ```
 
-##### Option B: DEB Package (Debian/Ubuntu)
+### Flag Reference
+
+All flags apply to both `start` and `generate_disconnectome` unless noted.
+
+| Short       | Long                        | Description                                                      |
+| ----------- | --------------------------- | ---------------------------------------------------------------- |
+| `-i`        | `--interactive`             | Prompt for any missing inputs                                    |
+| `-r`        | `--runsfolder`              | Path to the runs output folder                                   |
+| `-s`        | `--subjectid`               | Subject identifier                                               |
+| `-g`        | `--gestational-age`         | Gestational age in weeks (28–44)                                 |
+| `-t`        | `--brain-image-type`        | `T1w` or `T2w`                                                   |
+| `-l`        | `--lesion-mask`             | Path to lesion mask file                                         |
+| `-b`        | `--subject-brain-image`     | Path to brain image (`start --not-warped` only)                  |
+| `-w` / `-W` | `--warped` / `--not-warped` | Whether lesion is already in template space (`start` only)       |
+| `-d`        | `--data-dir`                | Override data directory (also: `DISCONNECTOME_DATA_DIR` env var) |
+| `-a`        | `--auto-download`           | Download missing data without prompting                          |
+
+#### Specifying a custom data directory
+
+Pass `-d` / `--data-dir` to any command, or export the environment variable once in your shell to avoid repeating it:
 
 ```bash
-./build_linux.sh deb
+# Per-command flag
+python cli.py start -d /mnt/shared/data -r ./runs ...
+
+# Environment variable (persists for the session)
+export DISCONNECTOME_DATA_DIR=/mnt/shared/data
+python cli.py start -r ./runs ...
 ```
 
-**Output:** `disconnectome_1.0.0_amd64.deb`
+This is especially useful in dev mode where the default system data location may not have the data yet.
 
-**Installation:**
+---
+
+## Running with Docker
+
+The CLI is the recommended interface when running inside Docker. The GUI requires a display server and is not covered here.
+
+### Docker Quick Start
 
 ```bash
-sudo dpkg -i disconnectome_1.0.0_amd64.deb
+# Build the image
+docker build -t disconnectome .
+
+# Run interactively
+docker run --rm -it \
+  -v /path/to/data:/data \
+  -v /path/to/runs:/runs \
+  disconnectome \
+  python cli.py start -i -d /data
 ```
 
-##### Option C: RPM Package (Fedora/RHEL)
+### Providing Data
+
+The application needs `controls/` and `template/` directories. In Docker these are typically bind-mounted rather than downloaded at runtime. The application detects mounted data automatically — no marker files are required.
 
 ```bash
-# Install RPM build tools
-sudo dnf install rpm-build rpmdevtools
-
-# Setup build tree
-rpmdev-setuptree
-
-# Copy spec file to rpmbuild
-cp packaging/disconnectome.spec ~/rpmbuild/SPECS/
-
-# Build RPM
-rpmbuild -ba ~/rpmbuild/SPECS/disconnectome.spec
+# Mount pre-extracted data directly
+docker run --rm \
+  -v /path/to/data:/app/data \
+  -v /path/to/runs:/runs \
+  disconnectome \
+  python cli.py start \
+    -d /app/data \
+    -r /runs \
+    -s sub01 -g 36 -t T2w \
+    -b /runs/sub01_brain.nii.gz \
+    -l /runs/sub01_lesion.nii.gz
 ```
 
-**Output:** `~/rpmbuild/RPMS/x86_64/disconnectome-1.0.0-1.x86_64.rpm`
+If the data directory is read-only (e.g. an immutable layer or NFS mount), the application will still recognise the data — it just won't be able to write marker files, which is fine.
 
-**Installation:**
+### Environment Variables
+
+| Variable                 | Description                                                                               |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| `DISCONNECTOME_DATA_DIR` | Path to the directory containing `controls/` and `template/`. Equivalent to `--data-dir`. |
 
 ```bash
-sudo dnf install ~/rpmbuild/RPMS/x86_64/disconnectome-1.0.0-1.x86_64.rpm
+docker run --rm \
+  -e DISCONNECTOME_DATA_DIR=/app/data \
+  -v /path/to/data:/app/data \
+  -v /path/to/runs:/runs \
+  disconnectome \
+  python cli.py start -r /runs -s sub01 -g 36 -t T2w \
+    -b /runs/brain.nii.gz -l /runs/lesion.nii.gz
 ```
 
-#### Testing
+### Example Compose File
+
+```yaml
+# docker-compose.yml
+services:
+  disconnectome:
+    build: .
+    environment:
+      - DISCONNECTOME_DATA_DIR=/app/data
+    volumes:
+      - ./data:/app/data:ro # read-only data mount
+      - ./runs:/runs # read-write output mount
+    command: >
+      python cli.py start
+        -r /runs
+        -s sub01
+        -g 36
+        -t T2w
+        -b /runs/sub01_brain.nii.gz
+        -l /runs/sub01_lesion.nii.gz
+```
 
 ```bash
-# Test the built application
-./build_linux.sh test
+docker compose run --rm disconnectome
+```
 
-# Or manually
-./dist/Disconnectome/Disconnectome
+### Dockerfile Notes
+
+Make sure `git` is installed in your image if you plan to run `generate_changelog.py` inside the container:
+
+```dockerfile
+RUN apt-get update && apt-get install -y git
 ```
 
 ---
 
 ## Data Package Setup
 
-The application requires large data files (controls and templates) that are downloaded on first launch.
+The application requires two data packages: `controls` (~5.6 GB) and `template` (~3 GB).
 
-### Step 1: Create Data Packages
+### Automatic Download
 
-```bash
-# Navigate to your project directory
-cd /path/to/disconnectome
-
-# Create controls package (assuming you have data/controls/)
-tar -czf controls.tar.gz data/controls/
-
-# Create template package (assuming you have data/template/)
-tar -czf template.tar.gz data/template/
-
-# Verify packages
-ls -lh *.tar.gz
-```
-
-### Step 2: Generate Checksums
+On first launch the application prompts to download the data automatically. Use `--auto-download` / `-a` to suppress the prompt in scripted environments:
 
 ```bash
-# Make script executable
-chmod +x generate_checksums.sh
-
-# Generate checksums
-./generate_checksums.sh
-
-# Example output:
-# controls.tar.gz:
-#   MD5: 78d1353481151aeaec8d5d0c74b3ab89
-#   Size: 500MB
-#
-# template.tar.gz:
-#   MD5: e82bcba92123638b001efe6353df62c0
-#   Size: 3000MB
+python cli.py check_data -a
 ```
 
-### Step 3: Upload to Hosting Service
+### Manual Installation
 
-Choose one of the following hosting options:
-
-#### Option A: Zenodo (Recommended for Research)
-
-1. Go to [zenodo.org](https://zenodo.org)
-2. Create an account
-3. Click "Upload" → "New upload"
-4. Upload `controls.tar.gz` and `template.tar.gz`
-5. Fill in metadata (title, description, authors)
-6. Click "Publish"
-7. Copy the file URLs (format: `https://zenodo.org/record/{RECORD_ID}/files/{filename}`)
-
-#### Option B: Institutional Server
+Download and extract the archives directly into your data directory:
 
 ```bash
-# SCP upload to university server
-scp controls.tar.gz username@server.university.edu:/public/disconnectome/
-scp template.tar.gz username@server.university.edu:/public/disconnectome/
+DATA_DIR="${HOME}/.local/share/Disconnectome/data"   # Linux default
+# DATA_DIR="${HOME}/Library/Application Support/Disconnectome/data"  # macOS
+mkdir -p "$DATA_DIR"
 
-# URLs will be:
-# https://server.university.edu/public/disconnectome/controls.tar.gz
-# https://server.university.edu/public/disconnectome/template.tar.gz
+curl -L https://zenodo.org/records/17981084/files/controls.tar.gz | tar -xz -C "$DATA_DIR"
+curl -L https://zenodo.org/records/17981084/files/template.tar.gz | tar -xz -C "$DATA_DIR"
 ```
 
-#### Option C: AWS S3
+The resulting layout should be:
 
-```bash
-# Install AWS CLI
-pip install awscli
-
-# Configure credentials
-aws configure
-
-# Create bucket
-aws s3 mb s3://disconnectome-data
-
-# Upload with public read access
-aws s3 cp controls.tar.gz s3://disconnectome-data/ --acl public-read
-aws s3 cp template.tar.gz s3://disconnectome-data/ --acl public-read
-
-# URLs will be:
-# https://disconnectome-data.s3.amazonaws.com/controls.tar.gz
-# https://disconnectome-data.s3.amazonaws.com/template.tar.gz
 ```
-
-### Step 4: Update Data Downloader Configuration
-
-Edit `lib/data_downloader.py`:
-
-```python
-DATA_SOURCES = {
-    "controls": {
-        "url": "https://your-actual-url.com/controls.tar.gz",  # UPDATE THIS
-        "md5": "78d1353481151aeaec8d5d0c74b3ab89",  # UPDATE WITH ACTUAL MD5
-        "size_mb": 500,  # UPDATE WITH ACTUAL SIZE
-        "required": True,
-        "description": "Control subject tractography data",
-    },
-    "template": {
-        "url": "https://your-actual-url.com/template.tar.gz",  # UPDATE THIS
-        "md5": "e82bcba92123638b001efe6353df62c0",  # UPDATE WITH ACTUAL MD5
-        "size_mb": 3000,  # UPDATE WITH ACTUAL SIZE
-        "required": True,
-        "description": "dHCP brain templates (28-44 weeks) and warps",
-    },
-}
+$DATA_DIR/
+  controls/
+  template/
+    templates/
+    warps-ants/
 ```
 
 ---
@@ -555,269 +384,212 @@ DATA_SOURCES = {
 ### Running in Development Mode
 
 ```bash
-# Activate virtual environment
-source venv/bin/activate  # macOS/Linux
-venv\Scripts\activate     # Windows
+source venv/bin/activate
+python app.py       # GUI
+python cli.py --help  # CLI
+```
 
-# Run application
-python app.py
+In development mode the application checks for a `data/` directory in the project root first. If `data/controls/` exists it will be used automatically — no need to install data to the system location.
+
+You can also point at any directory using the env var or flag:
+
+```bash
+DISCONNECTOME_DATA_DIR=/path/to/data python app.py
+python cli.py start -d /path/to/data ...
 ```
 
 ### Project Structure
 
 ```
 disconnectome/
-├── app.py                      # Main application entry point
-├── cli.py                      # Command-line interface
+├── app.py                      # GUI entry point
+├── cli.py                      # CLI entry point
+├── generate_changelog.py       # Changelog generator
+├── bump_version.py             # Version bump utility
 ├── backend/
-│   ├── logic.py                # Processing logic with state management
+│   ├── logic.py                # Processing orchestration
 │   ├── step1*.py               # Warp to age-matched template
-│   ├── step2*.py               # Apply lesion to control images
+│   ├── step2*.py               # Apply lesion to control warps
 │   ├── step3*.py               # Generate visitation maps
 │   ├── step4*.py               # Warp to 40w template
-│   └── step5*.py               # Generate disconnectome
+│   └── step5*.py               # Generate disconnectome map
 ├── lib/
-│   ├── constants.py            # Application constants and paths
-│   ├── state_management.py     # State management system
-│   ├── theme_manager.py        # Theme management
-│   ├── data_downloader.py      # Data download system
-│   ├── logging_handler.py      # Logging system
-│   ├── threading_utils.py      # Thread-safe utilities for GUI updates and background processing
-│   ├── gui_utils.py            # GUI utility functions
-│   ├── makeThumbnails.py       # Thumbnail generation
-│   └── utils.py                # General utilities
-├── screens/
-│   ├── ctk_hyperlink_manager.py # Manage clickable links
-│   ├── data_download_dialog.py # Dialog window for downloading data
-│   ├── start_screen.py         # Initial workflow selection
-│   ├── warp_form.py            # Brain image + lesion mask input
-│   ├── warped_lesion_form.py   # Pre-warped lesion input
-│   ├── disconnectome_form.py   # Review warp results
-│   ├── result_screen.py        # Final disconnectome display
-│   └── loading_overlay.py      # Progress indicator
-├── themes/                     # CustomTkinter theme files
-│   ├── blue.json
-│   ├── teal.json
-│   └── graphite.json
-├── requirements.txt            # Python dependencies
-├── Disconnectome.spec          # PyInstaller specification
-├── app_icon.png                # Logo for the application
-├── convert_icon.py             # Script to convert PNG icon
-├── build_macos.sh              # macOS build script
-├── build_windows.bat           # Windows build script
-├── build_linux.sh              # Linux build script
-└── README.md                   # This file
+│   ├── constants.py            # Paths, version info
+│   ├── state_management.py     # Shared state dataclasses
+│   ├── data_downloader.py      # Data download/verification
+│   └── utils.py                # Shared utilities
+├── .github/
+│   └── workflows/
+│       ├── build.yml           # CI build on tag push
+│       ├── changelog.yml       # Auto-generate changelog on tag push
+│       └── version_sync.yml    # Sync version in constants.py on tag push
+└── CHANGELOG.md                # Auto-generated, do not edit by hand
 ```
 
-[icon source](https://www.freepik.com/icon/brain_5015667#fromView=keyword&page=1&position=12&uuid=cef2547b-fd43-4e93-9ded-3158650c666b)
+---
 
-### Adding New Themes
+## Versioning
 
-1. Create a new JSON file in `themes/` directory:
+Version numbers follow [Semantic Versioning](https://semver.org) (`MAJOR.MINOR.PATCH`). The version in `lib/constants.py` is managed automatically — you should not edit it by hand.
 
-```json
-{
-  "CTk": {
-    "fg_color": ["#F0F0F0", "#222222"]
-  },
-  "CTkButton": {
-    "fg_color": ["#3B82F6", "#60A5FA"],
-    "hover_color": ["#2563EB", "#93C5FD"]
-  }
-  // ... more widget configurations
-}
+### Bumping the Version
+
+Use `bump_version.py` from the project root:
+
+```bash
+python bump_version.py patch    # 1.0.0 → 1.0.1  (bug fixes)
+python bump_version.py minor    # 1.0.1 → 1.1.0  (new features)
+python bump_version.py major    # 1.1.0 → 2.0.0  (breaking changes)
+python bump_version.py 2.1.0    # set an exact version
+
+python bump_version.py patch --dry-run   # preview without changes
+python bump_version.py patch --no-tag    # commit but skip tagging
 ```
 
-2. The theme will automatically appear in the application's theme selector
+This script:
 
-### Modifying Build Configuration
+1. Updates `__version__` and `__build_date__` in `lib/constants.py`
+2. Commits the change with a `chore: bump version to X.Y.Z` message
+3. Creates an annotated git tag `vX.Y.Z`
 
-Edit `Disconnectome.spec` to customize:
+After running, push the tag to trigger the CI build and release pipeline:
 
-- Hidden imports
-- Data files to include
-- Excluded modules
-- Binary dependencies
-- Icon paths
+```bash
+git push origin --follow-tags
+```
+
+> **Note:** If you create a tag manually (e.g. via the GitHub UI), the `version_sync` GitHub Actions workflow will automatically patch `lib/constants.py` and commit it back to the default branch.
+
+### Commit Message Convention
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/). The changelog generator reads these prefixes to categorise changes:
+
+| Prefix                                                    | Changelog section |
+| --------------------------------------------------------- | ----------------- |
+| `feat:`                                                   | Added             |
+| `fix:`, `perf:`, `revert:`                                | Fixed             |
+| `refactor:`, `chore:`, `docs:`, `style:`, `ci:`, `build:` | Changed           |
+| `BREAKING CHANGE` in footer, or `!` after prefix          | Breaking Changes  |
+
+Each commit should have a single type. If a change spans multiple categories, split it into separate commits:
+
+```bash
+git add cli.py
+git commit -m "feat: add interactive mode to CLI"
+
+git add lib/data_downloader.py
+git commit -m "fix: check_installation accepts manually mounted data directories"
+```
+
+---
+
+## Changelog
+
+`CHANGELOG.md` is generated automatically from git history. Do not edit it by hand.
+
+### Generate Locally
+
+```bash
+# Requires git to be installed
+python generate_changelog.py             # writes CHANGELOG.md
+python generate_changelog.py --stdout    # preview without writing
+python generate_changelog.py -o OUT.md  # custom output path
+```
+
+### Automatic Generation
+
+The `changelog` GitHub Actions workflow regenerates `CHANGELOG.md` and updates the GitHub Release body every time a version tag is pushed. No manual steps needed.
 
 ---
 
 ## Troubleshooting
 
-### Common Build Issues
+### Data not found / prompted to download unexpectedly
 
-#### Issue: PyInstaller fails with "ModuleNotFoundError"
+If you have data installed but the app keeps asking to download:
 
-**Solution:** Add missing module to `hiddenimports` in `Disconnectome.spec`:
+1. Verify the data directory contains `controls/` and `template/` subdirectories.
+2. Check the directory being used: run `python cli.py check_data` — it prints the path being searched.
+3. If running in Docker or with manually extracted data, the marker files may be absent. This is handled automatically — the app scans the directory contents instead.
+4. Override the directory explicitly: `python cli.py check_data -d /your/data/path`.
 
-```python
-hiddenimports = [
-    # ... existing imports
-    'your.missing.module',
-]
+### Application crashes on launch
+
+```bash
+# Run from terminal to see full output
+python app.py
+
+# Or check the log file
+cat disconnectome.log
 ```
 
-#### Issue: "Permission denied" when creating DATA_ROOT
+### Data download fails
 
-**Solution:** The application will automatically fall back to a temporary directory. Check logs in `disconnectome.log`.
+1. Verify URLs in `lib/data_downloader.py` are accessible.
+2. Check MD5 checksums match actual files.
+3. Try downloading manually and extracting into the data directory (see [Manual Installation](#manual-installation)).
 
-#### Issue: Application crashes on launch
+### Build is too large
 
-**Solutions:**
-
-1. Check `disconnectome.log` for error messages
-2. Run from terminal to see console output:
-
-   ```bash
-   # macOS
-   ./dist/Disconnectome.app/Contents/MacOS/Disconnectome
-
-   # Windows
-   dist\Disconnectome\Disconnectome.exe
-
-   # Linux
-   ./dist/Disconnectome/Disconnectome
-   ```
-
-#### Issue: Data download fails
-
-**Solutions:**
-
-1. Verify URLs in `lib/data_downloader.py` are accessible
-2. Check MD5 checksums match actual files
-3. Ensure firewall allows outbound connections
-4. Try downloading manually and placing in data directory
-
-#### Issue: Build is too large
-
-**Solution:** Exclude unnecessary files in `Disconnectome.spec`:
+Exclude unnecessary packages in `Disconnectome.spec`:
 
 ```python
-excludes = [
-    'matplotlib.tests',
-    'scipy.tests',
-    'pytest',
-    'IPython',
-    'jupyter',
-    # Add more here
-]
+excludes = ['matplotlib.tests', 'scipy.tests', 'pytest', 'IPython', 'jupyter']
 ```
 
 ### Platform-Specific Issues
 
-#### macOS: "App is damaged and can't be opened"
-
-**Cause:** Gatekeeper blocking unsigned application
-
-**Solution:**
+**macOS — "App is damaged and can't be opened"**
 
 ```bash
-# Remove quarantine attribute
 xattr -cr dist/Disconnectome.app
-
-# Or allow in System Preferences > Security & Privacy
 ```
 
-#### Windows: "Windows protected your PC"
+**Windows — "Windows protected your PC"**
+Click "More info" → "Run anyway", or code-sign the executable.
 
-**Cause:** SmartScreen filter blocking unsigned executable
-
-**Solution:**
-
-1. Click "More info"
-2. Click "Run anyway"
-3. Or: Code sign the application
-
-#### Linux: "error while loading shared libraries"
-
-**Cause:** Missing system libraries
-
-**Solution:**
+**Linux — "error while loading shared libraries"**
 
 ```bash
-# Ubuntu/Debian
-sudo apt-get install libxcb-xinerama0
-
-# Fedora
-sudo dnf install xcb-util-wm
+sudo apt-get install libxcb-xinerama0   # Ubuntu/Debian
+sudo dnf install xcb-util-wm            # Fedora
 ```
 
-### Getting Help
+**Docker — `git: not found` when running generate_changelog.py**
 
-- **Check logs:** `disconnectome.log` in application directory
-- **GitHub Issues:** [Report a bug](https://github.com/your-org/disconnectome/issues)
-- **Email support:** support@yourlab.edu
+```dockerfile
+RUN apt-get update && apt-get install -y git
+```
 
 ---
 
 ## Continuous Integration
 
-### GitHub Actions
+The repository includes three GitHub Actions workflows triggered on `v*.*.*` tag pushes:
 
-The repository includes a `.github/workflows/build.yml` file for automated builds.
+| Workflow     | File               | What it does                                                          |
+| ------------ | ------------------ | --------------------------------------------------------------------- |
+| Build        | `build.yml`        | Builds and packages for macOS, Windows, Linux; creates GitHub Release |
+| Changelog    | `changelog.yml`    | Regenerates `CHANGELOG.md`; populates Release body                    |
+| Version Sync | `version_sync.yml` | Patches `lib/constants.py` if tagged without using `bump_version.py`  |
 
-**To trigger a build:**
+To trigger all three:
 
 ```bash
-# Create and push a version tag
-git tag -a v1.0.0 -m "Release version 1.0.0"
-git push origin v1.0.0
+python bump_version.py minor
+git push origin --follow-tags
 ```
-
-This will automatically:
-
-1. Build for all three platforms
-2. Run tests
-3. Create a GitHub Release
-4. Upload build artifacts
 
 ---
 
 ## Pre-Release Checklist
 
-Before releasing to production:
-
-- [ ] Update version number in `lib/constants.py`
-- [ ] Upload data packages to hosting service
-- [ ] Update `lib/data_downloader.py` with real URLs and checksums
-- [ ] Test data download on fresh installation
-- [ ] Test complete workflow on all platforms
-- [ ] Update CHANGELOG.md
-- [ ] Create release notes
-- [ ] Code sign applications (optional)
-- [ ] Test installers on clean systems
-
----
-
-## Distribution
-
-### GitHub Releases
-
-1. **Create Release:**
-
-   ```bash
-   git tag -a v1.0.0 -m "Release v1.0.0"
-   git push origin v1.0.0
-   ```
-
-2. **Draft Release on GitHub:**
-   - Go to Releases → Draft a new release
-   - Select tag `v1.0.0`
-   - Add release notes
-   - Upload binaries:
-     - `Disconnectome-macOS.dmg`
-     - `DisconnectomeSetup-1.0.0.exe`
-     - `Disconnectome-x86_64.AppImage`
-     - `disconnectome_1.0.0_amd64.deb`
-
-3. **Publish Release**
-
-### Alternative Distribution Channels
-
-- **Homebrew (macOS):** Create a Homebrew formula
-- **Chocolatey (Windows):** Create a Chocolatey package
-- **Snap Store (Linux):** Create a Snap package
-- **FlatHub (Linux):** Create a Flatpak
+- [ ] Run `python bump_version.py <part>` to bump the version
+- [ ] Upload updated data packages to Zenodo if data has changed
+- [ ] Update URLs/checksums in `lib/data_downloader.py` if data packages changed
+- [ ] Test full pipeline on at least two platforms
+- [ ] Push with `git push origin --follow-tags`
+- [ ] Verify GitHub Release was created with correct artifacts and changelog
 
 ---
 
@@ -826,30 +598,30 @@ Before releasing to production:
 Contributions are welcome! Please:
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch: `git checkout -b feat/my-feature`
+3. Make focused, single-purpose commits using [Conventional Commits](#commit-message-convention)
+4. Push and open a Pull Request
 
 ### Development Guidelines
 
-- Follow PEP 8 style guide
+- Follow PEP 8
 - Add type hints to new functions
-- Update documentation for new features
-- Test on at least two platforms before submitting PR
+- Update documentation for user-facing changes
+- Test on at least two platforms before submitting a PR
 
 ---
 
 ## License
 
-This project is licensed under the GNU GENERAL PUBLIC LICENSE - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 — see the [LICENSE](LICENSE.txt) file for details.
 
 ---
 
 ## Acknowledgments
 
-- [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) - Modern UI framework
-- [ANTs](http://stnava.github.io/ANTs/) - Image registration toolkit
+- [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) — Modern UI framework
+- [ANTs](http://stnava.github.io/ANTs/) — Image registration toolkit
+- [dHCP](https://www.developingconnectome.org/) — Brain templates
 
 ---
 
@@ -858,11 +630,11 @@ This project is licensed under the GNU GENERAL PUBLIC LICENSE - see the [LICENSE
 If you use this software in your research, please cite:
 
 ```bibtex
-@software{disconnectome2026,
-  author = {Your Name},
-  title = {Disconnectome: Brain Disconnectome Analysis Tool},
-  year = {2026},
-  url = {https://github.com/sufkes/neonatal_disconnectome}
+@software{disconnectome2024,
+  author = {Steven Ufkes},
+  title  = {Disconnectome: Brain Disconnectome Analysis Tool},
+  year   = {2024},
+  url    = {https://github.com/sufkes/neonatal_disconnectome}
 }
 ```
 
@@ -870,13 +642,5 @@ If you use this software in your research, please cite:
 
 ## Support
 
-For questions, issues, or feature requests:
-
-- **Documentation:** [https://github.com/sufkes/neonatal_disconnectome](https://github.com/sufkes/neonatal_disconnectome)
 - **Issues:** [GitHub Issues](https://github.com/sufkes/neonatal_disconnectome/issues)
-- **Email:** steven.ufkes@cw.bc.ca
-
----
-
-**Last Updated:** Feb 2026
-**Version:** 1.0.6
+- **Documentation:** [GitHub Wiki](https://github.com/sufkes/neonatal_disconnectome/wiki)
