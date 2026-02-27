@@ -136,7 +136,7 @@ THUMBNAIL_LESION_TEMPLATE = "lesion_on_age_matched_template_clusters.png"
 THUMBNAIL_DISCONNECTOME = "disconnectome_at_lesion_centroids_0.png"
 
 # Version information — updated automatically by bump_version.py
-__version__ = "1.0.6"
+__version__ = "1.0.5"
 __build_date__ = "2026-02-25"
 __author__ = "Steven Ufkes"
 
