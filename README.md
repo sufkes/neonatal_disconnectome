@@ -621,7 +621,6 @@ This project is licensed under the GNU General Public License v3.0 — see the [
 
 - [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) — Modern UI framework
 - [ANTs](http://stnava.github.io/ANTs/) — Image registration toolkit
-- [dHCP](https://www.developingconnectome.org/) — Brain templates
 
 ---
 
