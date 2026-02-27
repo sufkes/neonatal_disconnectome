@@ -1,0 +1,121 @@
+# .github/workflows/version_sync.yml
+#
+# Keeps lib/constants.py in sync with the git tag whenever a v*.*.* tag is
+# pushed — whether via bump_version.py or a manual `git tag`.
+#
+# If bump_version.py was used, the file is already correct and this workflow
+# becomes a no-op (the git diff will be empty and no commit is made).
+#
+# If someone tags manually without running bump_version.py first, this
+# workflow patches the file and commits it back so the app always reports
+# the right version at runtime.
+
+name: Sync Version
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  sync-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          # Use a token with write access so we can push back
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Parse version from tag
+        id: version
+        run: |
+          # Strip leading 'v' from the tag name
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG"           >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION"   >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Patch lib/constants.py
+        run: |
+          python3 - << 'EOF'
+          import re
+          from pathlib import Path
+
+          constants = Path("lib/constants.py")
+          content = constants.read_text()
+
+          version = "${{ steps.version.outputs.version }}"
+          today   = "${{ steps.version.outputs.date }}"
+
+          content = re.sub(
+              r'(__version__\s*=\s*")[^"]*(")',
+              lambda m: m.group(1) + version + m.group(2),
+              content,
+          )
+          content = re.sub(
+              r'(__build_date__\s*=\s*")[^"]*(")',
+              lambda m: m.group(1) + today + m.group(2),
+              content,
+          )
+
+          constants.write_text(content)
+          print(f"Patched: __version__ = '{version}', __build_date__ = '{today}'")
+          EOF
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check out the default branch to commit there, not on the tag itself
+          DEFAULT_BRANCH=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
+          git fetch origin "$DEFAULT_BRANCH"
+          git checkout "$DEFAULT_BRANCH"
+
+          # Re-apply the patch on the branch (checkout above may have reverted it)
+          python3 - << 'EOF'
+          import re
+          from pathlib import Path
+
+          constants = Path("lib/constants.py")
+          content = constants.read_text()
+
+          version = "${{ steps.version.outputs.version }}"
+          today   = "${{ steps.version.outputs.date }}"
+
+          content = re.sub(
+              r'(__version__\s*=\s*")[^"]*(")',
+              lambda m: m.group(1) + version + m.group(2),
+              content,
+          )
+          content = re.sub(
+              r'(__build_date__\s*=\s*")[^"]*(")',
+              lambda m: m.group(1) + today + m.group(2),
+              content,
+          )
+
+          constants.write_text(content)
+          EOF
+
+          git add lib/constants.py
+          # Only commit if there are actual changes
+          if git diff --cached --quiet; then
+            echo "lib/constants.py already up to date — nothing to commit."
+          else
+            git commit -m "chore: sync version to ${{ steps.version.outputs.tag }}"
+            git push origin "$DEFAULT_BRANCH"
+            echo "Pushed version sync commit."
+          fi

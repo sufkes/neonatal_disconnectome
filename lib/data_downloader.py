@@ -83,17 +83,50 @@ class DataDownloader:
 
     def check_installation(self) -> Dict[str, bool]:
         """
-        Check which data packages are installed
+        Check which data packages are installed.
 
-        Returns:
-            Dictionary mapping package name to installation status
+        Checks marker files first (fast path).  If a marker is absent but the
+        package directory exists and is non-empty, the data was installed
+        manually or via a Docker volume mount — treat it as installed and write
+        the marker so subsequent checks skip the directory scan.
         """
         status = {}
 
-        for package_name, config in self.DATA_SOURCES.items():
-            # Check if marker file exists (created after successful extraction)
+        for package_name in self.DATA_SOURCES:
             marker_file = self.data_dir / f".{package_name}.installed"
-            status[package_name] = marker_file.exists()
+
+            if marker_file.exists():
+                # Normal path: downloader already ran and left a marker.
+                status[package_name] = True
+                continue
+
+            # Fallback: data may have been copied/mounted directly (e.g. Docker,
+            # network share, manual extraction).  Accept it if the directory
+            # exists and contains at least one file anywhere inside it.
+            package_dir = self.data_dir / package_name
+            if package_dir.is_dir() and any(package_dir.rglob("*")):
+                logger.info(
+                    f"[{package_name}] No marker file found but directory is "
+                    f"populated — treating as installed and writing marker."
+                )
+                try:
+                    marker_file.write_text(
+                        json.dumps(
+                            {
+                                "version": "1.0",
+                                "installed": True,
+                                "url": "manually_installed",
+                                "size_bytes": -1,
+                            }
+                        )
+                    )
+                except OSError as e:
+                    # Read-only filesystem (e.g. immutable Docker layer) — still
+                    # report as installed, just don't persist the marker.
+                    logger.warning(f"[{package_name}] Could not write marker file: {e}")
+                status[package_name] = True
+            else:
+                status[package_name] = False
 
         return status
 

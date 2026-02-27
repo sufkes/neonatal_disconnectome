@@ -148,7 +148,11 @@ class ProcessingState:
         """Validate the current processing state"""
         errors = []
 
-        if not self.brain_image_path and not self.lesion_already_warped:
+        if (
+            not self.brain_image_path
+            and not self.lesion_already_warped
+            and not self.step1_completed
+        ):
             errors.append("Brain image path is required")
 
         if not self.lesion_mask_path:
@@ -174,7 +178,7 @@ class ProcessingState:
                 except ValueError:
                     errors.append("Template age must be a valid number")
         else:
-            if not self.gestational_age:
+            if not self.step1_completed and not self.gestational_age:
                 errors.append("Gestational age is required")
             else:
                 try:

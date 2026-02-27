@@ -1,0 +1,73 @@
+# .github/workflows/changelog.yml
+#
+# Automatically regenerates CHANGELOG.md whenever a version tag (v*.*.*) is
+# pushed, commits it back to the default branch, and attaches it to the
+# GitHub Release created by build.yml.
+#
+# Runs independently of the build workflow so you can also trigger it manually
+# via workflow_dispatch without doing a full build.
+
+name: Generate Changelog
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:   # allow manual runs from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # required — we need the full git log
+          fetch-tags: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Generate CHANGELOG.md
+        run: python generate_changelog.py --output CHANGELOG.md
+
+      - name: Commit updated changelog
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check out the default branch so we commit there, not on the tag
+          DEFAULT_BRANCH=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
+          git fetch origin "$DEFAULT_BRANCH"
+          git checkout "$DEFAULT_BRANCH"
+
+          git add CHANGELOG.md
+          # Only commit if there are actual changes
+          git diff --cached --quiet || git commit -m "docs: regenerate CHANGELOG.md for ${{ github.ref_name }}"
+          git push origin "$DEFAULT_BRANCH"
+
+      - name: Attach changelog to GitHub Release
+        # Appends the changelog content as the release body
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          # Extract just the block for this version tag from CHANGELOG.md
+          NOTES=$(python - <<'EOF'
+          import re, sys
+          tag = "${{ github.ref_name }}"
+          content = open("CHANGELOG.md").read()
+          # Find the section for this tag
+          pattern = rf"(## \[{re.escape(tag)}\].*?)(?=\n## \[|\Z)"
+          m = re.search(pattern, content, re.DOTALL)
+          print(m.group(1).strip() if m else f"Release {tag}")
+          EOF
+          )
+          gh release edit "$TAG" --notes "$NOTES" || \
+          gh release create "$TAG" --notes "$NOTES" --title "$TAG"

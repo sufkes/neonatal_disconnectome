@@ -224,7 +224,7 @@ def step2_from_state(
         runs_dir = config.runs_folder
         subject = processing.subject_id
         lesion_image = processing.lesion_mask_path
-        age = processing.gestational_age
+        age = processing.gestational_age or processing.template_age
         image_type = processing.brain_type
 
         # Get rounded age

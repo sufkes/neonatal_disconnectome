@@ -878,5 +878,5 @@ For questions, issues, or feature requests:
 
 ---
 
-**Last Updated:** December 2025
-**Version:** 1.0.0
+**Last Updated:** Feb 2026
+**Version:** 1.0.6
