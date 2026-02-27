@@ -344,37 +344,114 @@ RUN apt-get update && apt-get install -y git
 
 ## Data Package Setup
 
-The application requires two data packages: `controls` (~5.6 GB) and `template` (~3 GB).
+The application requires two large data packages that are **not bundled** with the application and must be hosted separately:
 
-### Automatic Download
+| Package    | Contents                                          | Size    |
+| ---------- | ------------------------------------------------- | ------- |
+| `controls` | Control subject tractography data                 | ~5.6 GB |
+| `template` | dHCP brain templates (28–44 weeks) and ANTs warps | ~3 GB   |
 
-On first launch the application prompts to download the data automatically. Use `--auto-download` / `-a` to suppress the prompt in scripted environments:
+### Step 1 — Create the Packages
 
 ```bash
-python cli.py check_data -a
+# From the project root, assuming data/controls/ and data/template/ exist
+tar -czf controls.tar.gz -C data controls/
+tar -czf template.tar.gz -C data template/
+
+# Verify
+ls -lh controls.tar.gz template.tar.gz
 ```
 
-### Manual Installation
-
-Download and extract the archives directly into your data directory:
+### Step 2 — Generate Checksums
 
 ```bash
-DATA_DIR="${HOME}/.local/share/Disconnectome/data"   # Linux default
+md5sum controls.tar.gz template.tar.gz
+# macOS: md5 controls.tar.gz template.tar.gz
+```
+
+Copy the resulting MD5 hashes — you will need them in Step 4.
+
+### Step 3 — Upload to a Hosting Service
+
+#### Option A: Zenodo (recommended for research)
+
+1. Go to [zenodo.org](https://zenodo.org) and create an account
+2. Click **Upload → New upload**
+3. Upload `controls.tar.gz` and `template.tar.gz`
+4. Fill in metadata and click **Publish**
+5. Note the file URLs (format: `https://zenodo.org/records/{ID}/files/{filename}`)
+
+#### Option B: Institutional server
+
+```bash
+scp controls.tar.gz template.tar.gz username@server.university.edu:/public/disconnectome/
+# URLs: https://server.university.edu/public/disconnectome/controls.tar.gz
+```
+
+#### Option C: AWS S3
+
+```bash
+aws s3 cp controls.tar.gz s3://your-bucket/ --acl public-read
+aws s3 cp template.tar.gz s3://your-bucket/ --acl public-read
+# URLs: https://your-bucket.s3.amazonaws.com/controls.tar.gz
+```
+
+### Step 4 — Update `lib/data_downloader.py`
+
+Replace the placeholder values with your actual URLs and MD5 checksums:
+
+```python
+DATA_SOURCES = {
+    "controls": {
+        "url": "https://your-host.example.com/controls.tar.gz",  # from Step 3
+        "md5": "abc123...",                                        # from Step 2
+        "size_mb": 5600,
+        "required": True,
+        "description": "Control subject tractography data",
+    },
+    "template": {
+        "url": "https://your-host.example.com/template.tar.gz",  # from Step 3
+        "md5": "def456...",                                        # from Step 2
+        "size_mb": 3000,
+        "required": True,
+        "description": "dHCP brain templates (28-44 weeks) and warps",
+    },
+}
+```
+
+### Automatic Download (end users)
+
+Once the URLs are configured, end users are prompted to download on first launch. The download can also be triggered manually:
+
+```bash
+python cli.py check_data          # prompt to download if missing
+python cli.py check_data -a       # download automatically without prompting
+python cli.py check_data -d /path # download to a custom directory
+```
+
+### Manual Installation (end users)
+
+If automatic download is unavailable (e.g. in an air-gapped environment), download the archives manually and extract them into the data directory:
+
+```bash
+DATA_DIR="${HOME}/.local/share/Disconnectome/data"            # Linux
 # DATA_DIR="${HOME}/Library/Application Support/Disconnectome/data"  # macOS
+# DATA_DIR="%APPDATA%\Disconnectome\data"                         # Windows
 mkdir -p "$DATA_DIR"
 
 curl -L https://zenodo.org/records/17981084/files/controls.tar.gz | tar -xz -C "$DATA_DIR"
 curl -L https://zenodo.org/records/17981084/files/template.tar.gz | tar -xz -C "$DATA_DIR"
 ```
 
-The resulting layout should be:
+Expected directory layout after extraction:
 
 ```
 $DATA_DIR/
-  controls/
-  template/
-    templates/
-    warps-ants/
+├── controls/
+│   └── <control subject folders>
+└── template/
+    ├── templates/
+    └── warps-ants/
 ```
 
 ---
@@ -621,6 +698,7 @@ This project is licensed under the GNU General Public License v3.0 — see the [
 
 - [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) — Modern UI framework
 - [ANTs](http://stnava.github.io/ANTs/) — Image registration toolkit
+- [dHCP](https://www.developingconnectome.org/) — Brain templates
 
 ---
 
